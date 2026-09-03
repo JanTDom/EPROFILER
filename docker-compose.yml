@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: dyskurs-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dyskurs
+      POSTGRES_PASSWORD: dyskurs_secret
+      POSTGRES_DB: dyskurs_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dyskurs -d dyskurs_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dyskurs-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dyskurs-backend
+    restart: unless-stopped
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://dyskurs:dyskurs_secret@postgres:5432/dyskurs_db
+      - REDIS_URL=redis://redis:6379/0
+      - STORAGE_DIR=/app/storage/media
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - ./backend:/app
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dyskurs-worker
+    restart: unless-stopped
+    command: python -m app.workers.worker
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://dyskurs:dyskurs_secret@postgres:5432/dyskurs_db
+      - REDIS_URL=redis://redis:6379/0
+      - STORAGE_DIR=/app/storage/media
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+    volumes:
+      - ./backend:/app
+      - ./storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: dyskurs-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  redis_data:
