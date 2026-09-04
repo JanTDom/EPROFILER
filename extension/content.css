@@ -1,0 +1,233 @@
+/* E-PROFILER In-Page HUD Styles */
+
+#eprofiler-root {
+  all: initial;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #f1f5f9;
+  font-size: 13px;
+  line-height: 1.4;
+  z-index: 2147483647;
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  box-sizing: border-box;
+}
+
+#eprofiler-root *, #eprofiler-root *::before, #eprofiler-root *::after {
+  box-sizing: border-box;
+}
+
+/* Floating Trigger Pill */
+.eprofiler-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #0a0d14;
+  color: #ffffff;
+  border: 1px solid rgba(6, 182, 212, 0.6);
+  border-radius: 9999px;
+  padding: 8px 14px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(6, 182, 212, 0.3);
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.eprofiler-pill-btn:hover {
+  background: #0f172a;
+  border-color: #22d3ee;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.8), 0 0 16px rgba(34, 211, 238, 0.5);
+  transform: translateY(-1px);
+}
+
+.eprofiler-pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #06b6d4;
+  box-shadow: 0 0 8px #06b6d4;
+  animation: eprofiler-pulse 1.8s infinite;
+}
+
+.eprofiler-rec-dot {
+  background: #ef4444 !important;
+  box-shadow: 0 0 8px #ef4444 !important;
+  animation: eprofiler-pulse 1s infinite !important;
+}
+
+@keyframes eprofiler-pulse {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.95); opacity: 0.8; }
+}
+
+/* Expanded Panel */
+.eprofiler-panel {
+  width: 320px;
+  background: #0d121f;
+  border: 1px solid rgba(6, 182, 212, 0.5);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.8), 0 0 20px rgba(6, 182, 212, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: eprofiler-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes eprofiler-slide-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.eprofiler-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+  padding-bottom: 8px;
+}
+
+.eprofiler-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #22d3ee;
+  text-transform: uppercase;
+}
+
+.eprofiler-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.eprofiler-close-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Status Banner */
+.eprofiler-status-box {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 8px;
+  padding: 10px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #cbd5e1;
+}
+
+.eprofiler-status-warn {
+  border-color: rgba(234, 179, 8, 0.5);
+  background: rgba(66, 32, 6, 0.3);
+  color: #fef08a;
+}
+
+.eprofiler-status-rec {
+  border-color: rgba(239, 68, 68, 0.6);
+  background: rgba(69, 10, 10, 0.3);
+  color: #fca5a5;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Form Controls */
+.eprofiler-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.eprofiler-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.eprofiler-input {
+  width: 100%;
+  background: #070a12;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #ffffff;
+  font-size: 11px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.eprofiler-input:focus {
+  border-color: #06b6d4;
+}
+
+/* Action Buttons */
+.eprofiler-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.eprofiler-btn-primary {
+  background: linear-gradient(135deg, #0891b2, #4f46e5);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+}
+
+.eprofiler-btn-primary:hover {
+  background: linear-gradient(135deg, #06b6d4, #6366f1);
+  box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+}
+
+.eprofiler-btn-danger {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.eprofiler-btn-danger:hover {
+  background: #ef4444;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+}
+
+.eprofiler-footer-link {
+  font-size: 10px;
+  color: #64748b;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+}
+
+.eprofiler-footer-link:hover {
+  color: #06b6d4;
+  text-decoration: underline;
+}

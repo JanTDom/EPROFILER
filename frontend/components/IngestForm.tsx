@@ -15,7 +15,15 @@ import {
   RotateCcw,
   Radio,
   ShieldCheck,
-  Film
+  Film,
+  ExternalLink,
+  AlertCircle,
+  Puzzle,
+  Download,
+  CheckCircle2,
+  Info,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { createRecordingFromUrl, uploadRecordingFile, sanitizeVideoUrl } from "@/lib/api";
 import { RecordingType } from "@/lib/types";
@@ -52,6 +60,11 @@ export const IngestForm: React.FC = () => {
   const [publicationDate, setPublicationDate] = useState("");
   const [enableBiometrics, setEnableBiometrics] = useState(true);
   const [analysisScope, setAnalysisScope] = useState<"pelny" | "behawioralny">("pelny");
+
+  // Asystent VOD & Rejestrator DRM
+  const [vodUrl, setVodUrl] = useState("");
+  const [vodTabOpened, setVodTabOpened] = useState(false);
+  const [showExtensionGuide, setShowExtensionGuide] = useState(false);
 
   // Stan przechwytywania z ekranu / karty (Bypass DRM)
   const [isCapturing, setIsCapturing] = useState(false);
@@ -186,6 +199,7 @@ export const IngestForm: React.FC = () => {
         formData.append("profile_id", profileId);
         if (targetPolitician.trim()) formData.append("polityk_docelowy", targetPolitician.trim());
         formData.append("rola_polityka", politicianRole);
+        if (customKey) formData.append("gemini_api_key", customKey);
 
         const created = await uploadRecordingFile(formData);
         router.push(`/recordings/${created.id}`);
@@ -205,6 +219,7 @@ export const IngestForm: React.FC = () => {
         formData.append("profile_id", profileId);
         if (targetPolitician.trim()) formData.append("polityk_docelowy", targetPolitician.trim());
         formData.append("rola_polityka", politicianRole);
+        if (customKey) formData.append("gemini_api_key", customKey);
 
         const created = await uploadRecordingFile(formData);
         router.push(`/recordings/${created.id}`);
@@ -339,89 +354,206 @@ export const IngestForm: React.FC = () => {
           </div>
         )}
 
-        {/* ZAKŁADKA 3: PRZECHWYTYWANIE Z KARTY / DRM / VOD */}
+        {/* ZAKŁADKA 3: ASYSTENT VOD / STRONY CHRONIONE DRM */}
         {tab === "screen" && (
-          <div className="p-4 bg-purple-950/30 border border-purple-800/50 rounded-xl space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-purple-200 flex items-center gap-1.5">
+          <div className="p-4 bg-[#0d121f] border border-purple-800/60 rounded-xl space-y-4 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-purple-900/40">
+              <span className="text-xs font-bold text-purple-200 flex items-center gap-2">
                 <MonitorPlay className="w-4 h-4 text-purple-400" />
-                <span>Odtwarzacz ze strony chronionej DRM (TVN24 GO, Canal+, Polsat, Sejm)</span>
+                <span>Asystent VOD i Rejestrator Karty (Bypass DRM)</span>
               </span>
-              <span className="text-[10px] font-mono text-purple-300 bg-purple-950 px-2 py-0.5 border border-purple-700/60 rounded">
-                BYPASS DRM
-              </span>
+              <div className="flex items-center gap-1.5 font-mono text-[10px]">
+                <span className="text-purple-300 bg-purple-950/80 px-2 py-0.5 border border-purple-700/60 rounded">
+                  TVN24 • TVP VOD • POLSAT • SEJM
+                </span>
+                <span className="text-emerald-400 bg-emerald-950/80 px-2 py-0.5 border border-emerald-500/50 rounded">
+                  WIDEVINE OK
+                </span>
+              </div>
             </div>
 
-            <p className="text-[11px] text-slate-300 leading-relaxed">
-              Odtwórz wideo w innej karcie przeglądarki. Kliknij poniżej, wskaż tę kartę i pozwól systemowi nagrać wybrany fragment. Obraz i dźwięk zostaną zgrane wprost z dekodera przeglądarki.
-            </p>
-
-            {/* Stan 1: Przed nagraniem */}
-            {!isCapturing && !capturedBlob && (
-              <button
-                type="button"
-                onClick={startScreenCapture}
-                className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all"
-              >
-                <MonitorPlay className="w-4 h-4" />
-                <span>Rozpocznij przechwytywanie z karty odtwarzacza</span>
-              </button>
-            )}
-
-            {/* Stan 2: Trwa nagrywanie */}
-            {isCapturing && (
-              <div className="space-y-3">
-                <div className="relative rounded-lg overflow-hidden border border-red-500/70 bg-black aspect-video flex items-center justify-center">
-                  <video
-                    ref={videoPreviewRef}
-                    autoPlay
-                    muted
-                    className="w-full h-full object-contain"
-                  />
-                  <div className="absolute top-3 left-3 bg-red-600/90 text-white font-mono font-bold text-xs px-2.5 py-1 rounded flex items-center gap-1.5 animate-pulse shadow-md">
-                    <span className="w-2 h-2 rounded-full bg-white" />
-                    <span>REC // {formatTimer(captureSeconds)}</span>
-                  </div>
-                </div>
-
+            {/* KROK 1: WPROWADŹ LINK I OTWÓRZ W NOWEJ KARCIE */}
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold text-slate-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-purple-600 text-white font-mono text-[10px] flex items-center justify-center font-bold">1</span>
+                  <span>Podaj adres strony z wideo i otwórz ją:</span>
+                </span>
+                <span className="text-[10px] text-purple-400 font-mono">Serwis VOD / Portal informacyjny</span>
+              </label>
+              
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  placeholder="np. https://tvn24.pl/... lub https://vod.tvp.pl/..."
+                  value={vodUrl}
+                  onChange={(e) => setVodUrl(e.target.value)}
+                  className="flex-1 px-3.5 py-2.5 text-xs bg-[#0b101b] border border-purple-900/60 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-purple-400 font-mono transition-all"
+                />
                 <button
                   type="button"
-                  onClick={stopScreenCapture}
-                  className="w-full py-2.5 px-4 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg flex items-center justify-center gap-2 transition-all shadow-md"
+                  onClick={() => {
+                    if (!vodUrl.trim()) {
+                      setError("Wpisz adres strony z materiałem VOD.");
+                      return;
+                    }
+                    window.open(vodUrl.trim(), "_blank");
+                    setVodTabOpened(true);
+                    setError(null);
+                  }}
+                  className="px-4 py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap shadow-md cursor-pointer"
                 >
-                  <Square className="w-4 h-4 fill-white" />
-                  <span>Zakończ nagrywanie ({formatTimer(captureSeconds)})</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Otwórz wideo</span>
                 </button>
               </div>
-            )}
 
-            {/* Stan 3: Nagrano fragment */}
-            {!isCapturing && capturedBlob && (
-              <div className="space-y-3">
-                <div className="relative rounded-lg overflow-hidden border border-emerald-500/60 bg-black aspect-video flex items-center justify-center">
-                  <video
-                    src={capturedUrl || undefined}
-                    controls
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-2.5 bg-emerald-950/40 border border-emerald-500/40 rounded-lg text-xs font-mono text-emerald-300">
-                  <div className="flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>Materiał gotowy: {formatTimer(captureSeconds)}</span>
+              {/* Sygnalizacja logowania i odtwarzania */}
+              {vodTabOpened && (
+                <div className="p-3 bg-purple-950/40 border border-purple-500/50 rounded-lg text-xs space-y-1.5 text-purple-200 animate-fadeIn">
+                  <div className="flex items-center gap-2 font-bold text-white">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Karta została otwarta w nowym oknie przeglądarki!</span>
                   </div>
+                  <p className="text-[11px] text-slate-300 pl-6 leading-relaxed">
+                    1. <strong>Logowanie:</strong> Jeśli strona wymaga logowania lub subskrypcji — zaloguj się na swoje konto.<br />
+                    2. <strong>Odtwarzanie:</strong> Uruchom odtwarzanie materiału wideo i wycisz zbędne karty.<br />
+                    3. <strong>Przejdź do Kroku 2 poniżej</strong>, aby przechwycić obraz i dźwięk bezpośrednio z odtwarzacza.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* KROK 2: PRZECHWYĆ I NAGRAJ */}
+            <div className="space-y-2 pt-2 border-t border-slate-800/80">
+              <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                <span className="w-4 h-4 rounded-full bg-purple-600 text-white font-mono text-[10px] flex items-center justify-center font-bold">2</span>
+                <span>Zarejestruj fragment z odtwarzacza:</span>
+              </label>
+
+              {/* Stan 2A: Przed nagraniem */}
+              {!isCapturing && !capturedBlob && (
+                <div className="space-y-2">
                   <button
                     type="button"
-                    onClick={resetScreenCapture}
-                    className="text-[11px] text-slate-400 hover:text-red-400 flex items-center gap-1 underline transition-colors"
+                    onClick={startScreenCapture}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
-                    <RotateCcw className="w-3 h-3" />
-                    Nagraj ponownie
+                    <MonitorPlay className="w-4 h-4" />
+                    <span>Wybierz kartę i rozpocznij nagrywanie</span>
+                  </button>
+                  <p className="text-[10px] text-slate-400 text-center">
+                    💡 W oknie przeglądarki zaznacz zakładkę <strong>„Karta”</strong>, wskaż otwarte wideo i zaznacz opcję <strong>„Udostępnij dźwięk z karty”</strong>.
+                  </p>
+                </div>
+              )}
+
+              {/* Stan 2B: Trwa nagrywanie */}
+              {isCapturing && (
+                <div className="space-y-3">
+                  <div className="relative rounded-lg overflow-hidden border-2 border-red-500/80 bg-black aspect-video flex items-center justify-center shadow-2xl">
+                    <video
+                      ref={videoPreviewRef}
+                      autoPlay
+                      muted
+                      className="w-full h-full object-contain"
+                    />
+                    <div className="absolute top-3 left-3 bg-red-600 text-white font-mono font-bold text-xs px-3 py-1 rounded-md flex items-center gap-2 animate-pulse shadow-lg">
+                      <span className="w-2.5 h-2.5 rounded-full bg-white" />
+                      <span>REC // {formatTimer(captureSeconds)}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={stopScreenCapture}
+                    className="w-full py-3 px-4 bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg flex items-center justify-center gap-2 transition-all shadow-xl cursor-pointer"
+                  >
+                    <Square className="w-4 h-4 fill-white" />
+                    <span>Zakończ nagrywanie ({formatTimer(captureSeconds)}) i przejdź do analizy</span>
                   </button>
                 </div>
+              )}
+
+              {/* Stan 2C: Nagrano materiał */}
+              {!isCapturing && capturedBlob && (
+                <div className="space-y-3">
+                  <div className="relative rounded-lg overflow-hidden border border-emerald-500/60 bg-black aspect-video flex items-center justify-center">
+                    <video
+                      src={capturedUrl || undefined}
+                      controls
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-lg text-xs font-mono text-emerald-300">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>Zarejestrowano pomyślnie: {formatTimer(captureSeconds)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={resetScreenCapture}
+                      className="text-[11px] text-slate-400 hover:text-red-400 flex items-center gap-1 underline transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Nagraj ponownie
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* OPCJA B: ROZSZERZENIE CHROME / EDGE */}
+            <div className="p-3.5 bg-slate-950/80 border border-cyan-500/30 rounded-xl space-y-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-500/50 flex items-center justify-center flex-shrink-0">
+                    <Puzzle className="w-4 h-4 text-cyan-400" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                      <span>Rozszerzenie E-PROFILER dla Chrome / Edge</span>
+                      <span className="text-[9px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-500/40 px-1.5 py-0.2 rounded">
+                        NOWOŚĆ
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      Wykrywa wideo na dowolnej stronie i profiluje 1 kliknięciem bez przełączania kart.
+                    </p>
+                  </div>
+                </div>
+                
+                <a
+                  href="/eprofiler-chrome-extension.zip"
+                  download="eprofiler-chrome-extension.zip"
+                  className="px-3 py-1.5 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Pobierz .ZIP</span>
+                </a>
               </div>
-            )}
+
+              <div className="pt-2 border-t border-slate-800/80">
+                <button
+                  type="button"
+                  onClick={() => setShowExtensionGuide(!showExtensionGuide)}
+                  className="text-[10px] text-slate-400 hover:text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <Info className="w-3 h-3 text-cyan-400" />
+                  <span>Jak zainstalować w 30 sekund w Chrome/Edge?</span>
+                  {showExtensionGuide ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                </button>
+
+                {showExtensionGuide && (
+                  <ol className="mt-2 text-[11px] text-slate-300 space-y-1 pl-4 list-decimal leading-relaxed bg-slate-900/60 p-2.5 rounded border border-slate-800">
+                    <li>Pobierz i wypakuj plik <code>eprofiler-chrome-extension.zip</code> na dysku.</li>
+                    <li>Wpisz w przeglądarce <code>chrome://extensions</code> i włącz przełącznik <strong>Tryb dewelopera</strong> (prawy górny róg).</li>
+                    <li>Kliknij przycisk <strong>Załaduj rozpakowane</strong> i wskaż rozpakowany folder. Gotowe — ikona E-PROFILER pojawi się na pasku zadań!</li>
+                  </ol>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

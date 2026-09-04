@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>E-PROFILER</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      width: 340px;
+      background: #0a0d14;
+      color: #f1f5f9;
+      padding: 16px;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(6, 182, 212, 0.3);
+      padding-bottom: 10px;
+      margin-bottom: 14px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 800;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      color: #22d3ee;
+    }
+    .badge {
+      font-size: 9px;
+      font-weight: 700;
+      background: rgba(6, 182, 212, 0.15);
+      border: 1px solid rgba(6, 182, 212, 0.4);
+      color: #22d3ee;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #06b6d4;
+      box-shadow: 0 0 8px #06b6d4;
+    }
+    .card {
+      background: #0d121f;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+    .card-content {
+      font-size: 11px;
+      color: #e2e8f0;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+    }
+    label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+    }
+    input, select {
+      width: 100%;
+      background: #070a12;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: #ffffff;
+      font-size: 11px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: #06b6d4;
+    }
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      margin-bottom: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #0891b2, #4f46e5);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.25);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #06b6d4, #6366f1);
+      box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+    }
+    .btn-danger {
+      background: #dc2626;
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    }
+    .btn-danger:hover {
+      background: #ef4444;
+      box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+    }
+    .rec-box {
+      display: none;
+      background: rgba(69, 10, 10, 0.4);
+      border: 1px solid rgba(239, 68, 68, 0.6);
+      border-radius: 8px;
+      padding: 10px;
+      font-family: monospace;
+      color: #fca5a5;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 10px;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 0.8; }
+      50% { opacity: 1; }
+      100% { opacity: 0.8; }
+    }
+    .footer {
+      text-align: center;
+      padding-top: 6px;
+      border-top: 1px solid #1e293b;
+    }
+    .footer a {
+      font-size: 10px;
+      color: #64748b;
+      text-decoration: none;
+    }
+    .footer a:hover {
+      color: #06b6d4;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="brand">
+      <span class="pulse-dot" id="header-dot"></span>
+      <span>E-PROFILER</span>
+    </div>
+    <span class="badge">VOD ASYSTENT</span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Aktywna karta</div>
+    <div class="card-content" id="active-tab-title">Ładowanie...</div>
+  </div>
+
+  <div class="input-group">
+    <label for="target-person">Badany polityk / Cel audytu</label>
+    <input type="text" id="target-person" placeholder="np. Donald Tusk, Rafał Trzaskowski..." />
+  </div>
+
+  <div class="input-group">
+    <label for="recording-format">Format wystąpienia</label>
+    <select id="recording-format">
+      <option value="wywiad">Wywiad (1 na 1)</option>
+      <option value="debata">Debata / Panel dyskusyjny</option>
+      <option value="przemowienie">Przemówienie / Oświadczenie</option>
+    </select>
+  </div>
+
+  <div class="rec-box" id="rec-status">
+    🔴 TRWA NAGRYWANIE // <span id="rec-timer">00:00</span>
+  </div>
+
+  <button class="btn btn-primary" id="btn-start">
+    ⏺️ Nagraj tę kartę i profiluj
+  </button>
+
+  <button class="btn btn-danger" id="btn-stop" style="display: none;">
+    ⏹️ Zakończ nagranie
+  </button>
+
+  <div id="status-msg" style="display: none; font-size: 11px; color: #22d3ee; text-align: center; font-weight: bold; margin-bottom: 8px;">
+    ⏳ Przesyłanie do silnika AI...
+  </div>
+
+  <div class="footer">
+    <a href="https://eprofiler.pl" target="_blank">Otwórz platformę E-PROFILER (eprofiler.pl) ↗</a>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -24,24 +24,62 @@ OBOWIĄZUJĄ CIĘ ZASADY AUDYTU SZTABOWEGO I SPIN DOCTORINGU:
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const rawUrl = body.url;
-    if (!rawUrl) {
-      return NextResponse.json({ detail: "Brak adresu URL materiału wideo." }, { status: 400 });
+    const contentType = request.headers.get("content-type") || "";
+    const isMultipart = contentType.includes("multipart/form-data");
+
+    let rawUrl: string | null = null;
+    let uploadedFile: File | null = null;
+    let targetPerson: string | null = null;
+    let politicianRole = "Badany polityk";
+    let recordingType = "wywiad";
+    let scope = "pelny";
+    let profileId = "profile_main";
+    let title: string | null = null;
+    let publicationDate: string | null = null;
+    let enableBiometrics = true;
+    let customApiKeyParam: string | null = null;
+
+    if (isMultipart) {
+      const formData = await request.formData();
+      uploadedFile = formData.get("file") as File | null;
+      rawUrl = (formData.get("url") as string) || null;
+      title = (formData.get("tytul") as string)?.trim() || null;
+      targetPerson = (formData.get("polityk_docelowy") as string)?.trim() || null;
+      politicianRole = (formData.get("rola_polityka") as string)?.trim() || "Badany polityk";
+      recordingType = (formData.get("typ_nagrania") as string) || "wywiad";
+      scope = (formData.get("zakres_analizy") as string) || "pelny";
+      profileId = (formData.get("profile_id") as string) || "profile_main";
+      publicationDate = (formData.get("data_publikacji") as string) || null;
+      enableBiometrics = formData.get("tryb_biometryczny") !== "false";
+      customApiKeyParam = (formData.get("gemini_api_key") as string) || null;
+    } else {
+      const body = await request.json();
+      rawUrl = body.url || null;
+      title = body.tytul?.trim() || null;
+      targetPerson = body.polityk_docelowy?.trim() || null;
+      politicianRole = body.rola_polityka?.trim() || "Badany polityk";
+      recordingType = body.typ_nagrania || "wywiad";
+      scope = body.zakres_analizy || "pelny";
+      profileId = body.profile_id || "profile_main";
+      publicationDate = body.data_publikacji || null;
+      enableBiometrics = body.tryb_biometryczny ?? true;
+      customApiKeyParam = body.gemini_api_key || null;
     }
 
-    const cleanUrl = sanitizeVideoUrl(rawUrl);
-    const targetPerson = body.polityk_docelowy?.trim() || null;
-    const politicianRole = body.rola_polityka?.trim() || "Badany polityk";
-    const recordingType = body.typ_nagrania || "wywiad";
-    const scope = body.zakres_analizy || "pelny";
-    const profileId = body.profile_id || "profile_main";
+    if (!rawUrl && !uploadedFile) {
+      return NextResponse.json(
+        { detail: "Brak adresu URL ani pliku wideo/audio do analizy." },
+        { status: 400 }
+      );
+    }
+
+    const cleanUrl = rawUrl ? sanitizeVideoUrl(rawUrl) : null;
 
     // Klucz API: z nagłówka, ciasteczka lub zmiennej środowiskowej
     const cookieStore = await cookies();
     const customKeyFromCookie = cookieStore.get("eprofiler_gemini_key")?.value;
     const headerKey = request.headers.get("x-gemini-api-key");
-    const activeApiKey = headerKey || body.gemini_api_key || customKeyFromCookie || SYSTEM_GEMINI_KEY;
+    const activeApiKey = headerKey || customApiKeyParam || customKeyFromCookie || SYSTEM_GEMINI_KEY;
 
     if (!activeApiKey) {
       return NextResponse.json(
@@ -56,10 +94,10 @@ export async function POST(request: Request) {
     // 1. Zapisz początkowy stan w Supabase
     const initialRec = {
       id: recordingId,
-      zrodlo_typ: "url",
-      zrodlo_url: cleanUrl,
-      tytul: body.tytul?.trim() || `Nagranie (${cleanUrl.slice(0, 40)}...)`,
-      data_publikacji: body.data_publikacji || null,
+      zrodlo_typ: uploadedFile ? "plik" : "url",
+      zrodlo_url: cleanUrl || null,
+      tytul: title || (cleanUrl ? `Nagranie (${cleanUrl.slice(0, 40)}...)` : `Przechwycenie VOD (${new Date().toLocaleDateString()})`),
+      data_publikacji: publicationDate,
       czas_trwania_sek: 0,
       typ_nagrania: recordingType,
       status_przetwarzania: "PROFILOWANIE_AI",
@@ -68,7 +106,7 @@ export async function POST(request: Request) {
       profile_id: profileId,
       polityk_docelowy: targetPerson,
       rola_polityka: politicianRole,
-      tryb_biometryczny: body.tryb_biometryczny ?? true,
+      tryb_biometryczny: enableBiometrics,
       zakres_analizy: scope,
       rozpoznani_mowcy: [],
       created_at: now,
@@ -190,6 +228,27 @@ Zwróć poprawny JSON o schemacie:
   }
 }`;
 
+    let mediaPart: any;
+    if (uploadedFile) {
+      const arrayBuffer = await uploadedFile.arrayBuffer();
+      const base64Data = Buffer.from(arrayBuffer).toString("base64");
+      const rawMime = uploadedFile.type || "video/webm";
+      const mimeType = rawMime.split(";")[0].trim() || "video/webm";
+      mediaPart = {
+        inline_data: {
+          mime_type: mimeType,
+          data: base64Data,
+        },
+      };
+    } else {
+      mediaPart = {
+        file_data: {
+          file_uri: cleanUrl,
+          mime_type: "video/mp4",
+        },
+      };
+    }
+
     const geminiPayload = {
       system_instruction: {
         parts: [{ text: SYSTEM_INSTRUCTION }],
@@ -199,12 +258,7 @@ Zwróć poprawny JSON o schemacie:
           role: "user",
           parts: [
             { text: promptText },
-            {
-              file_data: {
-                file_uri: cleanUrl,
-                mime_type: "video/mp4",
-              },
-            },
+            mediaPart,
           ],
         },
       ],
@@ -227,6 +281,10 @@ Zwróć poprawny JSON o schemacie:
       const errBody = await geminiRes.text();
       console.error("Błąd wywołania Gemini API:", geminiRes.status, errBody);
 
+      const errorDesc = uploadedFile
+        ? "Błąd analizy przesłanego nagrania przez silnik AI."
+        : "Błąd analizy AI. Upewnij się, że film na YouTube jest publiczny.";
+
       // Aktualizuj status na błąd w Supabase
       await fetch(`${SUPABASE_URL}/rest/v1/recordings?id=eq.${recordingId}`, {
         method: "PATCH",
@@ -237,7 +295,7 @@ Zwróć poprawny JSON o schemacie:
         },
         body: JSON.stringify({
           status_przetwarzania: "BLAD",
-          krok_postepu: "Błąd analizy AI. Sprawdź czy materiał wideo jest publiczny na YouTube.",
+          krok_postepu: errorDesc,
           procent_postepu: 100,
           blad: `Gemini API HTTP ${geminiRes.status}: ${errBody.slice(0, 200)}`,
           updated_at: new Date().toISOString(),
@@ -245,7 +303,7 @@ Zwróć poprawny JSON o schemacie:
       });
 
       return NextResponse.json(
-        { detail: "Nie udało się przeanalizować wideo przez silnik AI. Upewnij się, że film na YouTube jest publiczny." },
+        { detail: errorDesc },
         { status: 502 }
       );
     }
@@ -272,7 +330,8 @@ Zwróć poprawny JSON o schemacie:
       }
     }
 
-    const videoTitle = analysis.tytul_wideo || body.tytul?.trim() || `Wywiad: ${diagnosedPolitician || cleanUrl.slice(0, 30)}`;
+    const fallbackTitle = cleanUrl ? `Wywiad: ${diagnosedPolitician || cleanUrl.slice(0, 30)}` : `Przechwycenie: ${diagnosedPolitician || "Nagranie VOD"}`;
+    const videoTitle = analysis.tytul_wideo || title || fallbackTitle;
     const duration = analysis.czas_trwania_sek || 600;
 
     // 3. Zapisz profil psychometryczny w Supabase

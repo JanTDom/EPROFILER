@@ -256,6 +256,29 @@ export async function setTargetSpeaker(
 }
 
 export async function uploadRecordingFile(formData: FormData): Promise<Recording> {
+  // 1. Standalone Cloud Analysis (/api/analyze)
+  // Działa w 100% w chmurze na Vercel z silnikiem AI
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      body: formData,
+    });
+    if (res.ok) {
+      const created = await res.json();
+      return normalizeRecording(created);
+    }
+    const errData = await res.json().catch(() => ({}));
+    if (errData?.detail) {
+      throw new Error(errData.detail);
+    }
+  } catch (err: any) {
+    if (err?.message && !err.message.includes("fetch")) {
+      throw err;
+    }
+    console.warn("Cloud /api/analyze upload fallback:", err);
+  }
+
+  // 2. Fallback do lokalnego API
   try {
     const res = await fetch(`${API_BASE}/api/recordings/upload`, {
       method: "POST",
@@ -269,7 +292,7 @@ export async function uploadRecordingFile(formData: FormData): Promise<Recording
     console.warn("API_BASE upload failed:", err);
   }
 
-  // Fallback to direct Supabase registration
+  // 3. Fallback do bezpośredniej rejestracji w Supabase
   if (SUPABASE_URL && SUPABASE_ANON_KEY) {
     const newId = crypto.randomUUID();
     const title = (formData.get("tytul") as string) || "Przesłany materiał wideo";
