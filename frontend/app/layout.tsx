@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import "./globals.css";
 import { LegalNotice } from "@/components/LegalNotice";
 import { Eye, Shield, Radio, Sparkles } from "lucide-react";
@@ -7,6 +8,14 @@ import { Eye, Shield, Radio, Sparkles } from "lucide-react";
 export const metadata: Metadata = {
   title: "PROFILER — Forensic Video & Speech Intelligence System",
   description: "Zaawansowana analiza wideo, intencji, mikroekspresji FACS, mowy ciała i perswazji osób publicznych w prostym języku.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.png",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
@@ -22,9 +31,14 @@ export default function RootLayout({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-8">
               <Link href="/" className="flex items-center gap-3 group">
-                <div className="relative w-9 h-9 bg-gradient-to-br from-cyan-500 to-blue-600 rounded flex items-center justify-center font-mono font-black text-white shadow-[0_0_15px_rgba(0,240,255,0.4)] group-hover:scale-105 transition-transform">
-                  <span className="text-base tracking-tighter">P</span>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full ring-2 ring-[#080a0f] animate-pulse" />
+                <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(0,240,255,0.35)] border border-cyan-500/30 group-hover:scale-105 transition-transform flex-shrink-0">
+                  <Image
+                    src="/logo.png"
+                    alt="PROFILER"
+                    fill
+                    className="object-cover"
+                    priority
+                  />
                 </div>
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">

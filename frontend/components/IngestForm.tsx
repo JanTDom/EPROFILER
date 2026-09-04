@@ -143,7 +143,7 @@ export const IngestForm: React.FC = () => {
               placeholder="https://www.youtube.com/watch?v=..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 font-mono transition-all"
+              className="w-full px-3.5 py-2.5 text-xs bg-[#0b101b] border border-slate-700/80 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:bg-[#0e1626] focus:ring-1 focus:ring-cyan-400/30 font-mono transition-all"
             />
           </div>
         ) : (
@@ -156,7 +156,7 @@ export const IngestForm: React.FC = () => {
               required
               accept="video/mp4,video/quicktime,video/webm,video/x-matroska"
               onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer focus:outline-none focus:border-cyan-400 transition-all"
+              className="w-full px-3.5 py-2.5 text-xs bg-[#0b101b] border border-slate-700/80 rounded-lg text-slate-200 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer focus:outline-none focus:border-cyan-400 transition-all"
             />
           </div>
         )}
@@ -169,11 +169,11 @@ export const IngestForm: React.FC = () => {
             <select
               value={recordingType}
               onChange={(e) => setRecordingType(e.target.value as RecordingType)}
-              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-200 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 transition-all"
+              className="w-full px-3.5 py-2.5 text-xs bg-[#0b101b] border border-slate-700/80 rounded-lg text-white focus:outline-none focus:border-cyan-400 focus:bg-[#0e1626] focus:ring-1 focus:ring-cyan-400/30 transition-all"
             >
-              <option value="wywiad" className="bg-slate-900 text-slate-100">Wywiad (1 na 1)</option>
-              <option value="debata" className="bg-slate-900 text-slate-100">Debata / Panel dyskusyjny</option>
-              <option value="przemowienie" className="bg-slate-900 text-slate-100">Przemówienie / Oświadczenie</option>
+              <option value="wywiad" className="bg-slate-900 text-white">Wywiad (1 na 1)</option>
+              <option value="debata" className="bg-slate-900 text-white">Debata / Panel dyskusyjny</option>
+              <option value="przemowienie" className="bg-slate-900 text-white">Przemówienie / Oświadczenie</option>
             </select>
           </div>
 
@@ -185,7 +185,7 @@ export const IngestForm: React.FC = () => {
               type="date"
               value={publicationDate}
               onChange={(e) => setPublicationDate(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-200 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 transition-all"
+              className="w-full px-3.5 py-2.5 text-xs bg-[#0b101b] border border-slate-700/80 rounded-lg text-white focus:outline-none focus:border-cyan-400 focus:bg-[#0e1626] focus:ring-1 focus:ring-cyan-400/30 transition-all"
             />
           </div>
         </div>
@@ -199,12 +199,12 @@ export const IngestForm: React.FC = () => {
             placeholder="np. Debata prezydencka — Starcie kandydatów"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 transition-all"
+            className="w-full px-3.5 py-2.5 text-xs bg-[#0b101b] border border-slate-700/80 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:bg-[#0e1626] focus:ring-1 focus:ring-cyan-400/30 transition-all"
           />
         </div>
 
         {/* Wskazanie badanego polityka (Kluczowe przy wielu mówcach) */}
-        <div className="p-4 bg-gradient-to-r from-blue-950/30 via-studio-surface/60 to-studio-surface/40 border border-cyan-500/30 rounded-xl space-y-3">
+        <div className="p-4 bg-gradient-to-r from-blue-950/30 via-slate-900/60 to-slate-900/40 border border-cyan-500/30 rounded-xl space-y-3">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-100 flex items-center gap-2">
               <UserCheck className="w-4 h-4 text-cyan-400" />
@@ -225,7 +225,7 @@ export const IngestForm: React.FC = () => {
               placeholder="np. Donald Tusk, Sławomir Mentzen, Mateusz Morawiecki... (lub puste: automatyczne wykrycie)"
               value={targetPolitician}
               onChange={(e) => setTargetPolitician(e.target.value)}
-              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/90 border border-cyan-500/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 font-medium transition-all"
+              className="w-full px-3.5 py-2.5 text-xs bg-[#0b101b] border border-cyan-500/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:bg-[#0e1626] focus:ring-1 focus:ring-cyan-400/30 font-medium transition-all"
             />
           </div>
 

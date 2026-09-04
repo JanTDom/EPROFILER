@@ -2,6 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  input, select, textarea {
+    color: #f8fafc;
+    background-color: #0b101b;
+  }
+  input::placeholder, textarea::placeholder {
+    color: #64748b;
+  }
+}
+
 :root {
   --background: #080a0f;
   --foreground: #f8fafc;

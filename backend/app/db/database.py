@@ -1,14 +1,30 @@
 from typing import AsyncGenerator
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from app.config import settings
 from app.db.models import Base
 
-# Utwórz silnik asynchroniczny
+# Utwórz silnik asynchroniczny ze zwiększonym limitem czasu oczekiwania na blokadę (60s)
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=(settings.ENV == "development"),
-    future=True
+    future=True,
+    connect_args={"timeout": 60}
 )
+
+@event.listens_for(engine.sync_engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    """Konfiguruje SQLite: busy_timeout i synchronous dla odporności na współbieżność."""
+    cursor = dbapi_connection.cursor()
+    try:
+        cursor.execute("PRAGMA busy_timeout=60000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        try:
+            cursor.execute("PRAGMA journal_mode=WAL")
+        except Exception:
+            pass
+    finally:
+        cursor.close()
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
@@ -22,7 +38,8 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         try:
             yield session
-            await session.commit()
+            if session.dirty or session.new or session.deleted:
+                await session.commit()
         except Exception:
             await session.rollback()
             raise

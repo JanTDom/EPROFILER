@@ -12,16 +12,20 @@ from app.services.plain_language import plain_language_service
 
 logger = logging.getLogger("profiler.gemini")
 
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
 
-SYSTEM_INSTRUCTION = """Jesteś analitykiem dyskursu politycznego i behawioralnym profilerem. Analizujesz publiczne wypowiedzi osób publicznych. Obowiązują cię twarde zasady:
-1. Rozdzielasz OBSERWACJĘ od INTERPRETACJI. Obserwacja to co padło w tekście lub w danych. Interpretacja to twoja hipoteza. Nigdy nie podajesz interpretacji jako faktu.
-2. Nie orzekasz o „prawdziwych intencjach", „stanie umysłu" ani o tym, czy ktoś „kłamie". Formułujesz hipotezy: „sygnały spójne z X".
-3. Każda ocena ma pewność w skali 0–1 i co najmniej jeden dosłowny cytat jako dowód.
-4. Jeśli dane są za słabe, zwracasz „niewystarczające dane" – nie zgadujesz.
-5. Nie dodajesz wiedzy spoza materiału. Nie zmyślasz faktów, dat, liczb.
-6. Wyniki tłumaczysz na prosty, żywy i w 100% zrozumiały dla każdego język polski bez medyczno-akademickiego żargonu.
-7. Odpowiadasz wyłącznie poprawnym JSON-em zgodnym ze schematem. Bez żadnego komentarza poza JSON."""
+SYSTEM_INSTRUCTION = """Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu PROFILER.
+Twoim celem jest rzetelny, krytyczny audyt wystąpienia publicznego osoby badanej. Nie tworzysz laurki ani pochlebstw — polityk i jego sztab potrzebują twardych, użytecznych ostrzeżeń, dekonstrukcji błędów oraz praktycznych wskazówek warsztatowych.
+
+OBOWIĄZUJĄ CIĘ ZASADY AUDYTU SZTABOWEGO I SPIN DOCTORINGU:
+1. CZUJNOŚĆ NA WYCIEKI EMOCJONALNE I NIEWERBALNE: Z całą surowością wychwytujesz emocje niedopuszczalne u lidera (irytacja, zniecierpliwienie, protekcjonalizm, uśmieszki wyższości i pogardy AU14, bezradność, nerwowość głosu, defensywne ucinanie wątków).
+2. DEKONSTRUKCJA NIELOGICZNOŚCI I PUSTOSŁOWIA: Punktujesz luki logiczne, brak ciągu przyczynowo-skutkowego, obietnice bez mechanizmu sprawczego, wewnętrzne sprzeczności oraz nieudolne próby ucieczki od odpowiedzi (toporny bridging).
+3. ANALIZA POWIERZCHNI ATAKU (AMUNICJA DLA OPONENTÓW): Identyfikujesz niefortunne sformułowania i tzw. 'samobóje', które sztaby konkurencji wytną na rolki, paski i spoty jako dowód słabości lub nieszczerości.
+4. WARSZTAT WYSTĄPIEŃ I DYKCJA: Oceniasz tempo mowy, intonację (unikanie intonacji pytającej przy twierdzeniach), pauzy retoryczne i natrętne wypełniacze.
+5. SKRYPTY NAPRAWCZE: Każdy zdiagnozowany błąd musi mieć gotowy szablon naprawczy ('Zamiast: X -> Mów: Y').
+6. KALIBRACJA OCENY: Kompresuj oceny ku środkowi skali (na skali 1-10 unikaj skrajności 1 czy 10; realistyczne, krytyczne wystąpienia pod presją mieszczą się typowo w przedziale 4-7/10).
+7. ZWIĘZŁOŚĆ I GĘSTOŚĆ INFORMACYJNA: Wszystkie opisy i uzasadnienia formułuj zwięźle, esencjonalnie, unikając rozwlekłości.
+8. FORMAT JĘZYKOWY: Pisz czystą polszczyzną w sentence case (tylko pierwsza litera zdania wielka). Odpowiadaj wyłącznie poprawnym JSON-em."""
 
 class GeminiProfilerService:
     def __init__(self, api_key: Optional[str] = None):
@@ -232,6 +236,165 @@ Zwróć poprawny JSON:
   "uzasadnienie_wyboru": "1-2 zdania prostym językiem polskim dlaczego ten mówca to cel profilowania"
 }}"""
         return await self._call_gemini_json(prompt)
+
+    async def profile_audio_multimodal(
+        self,
+        audio_path: str,
+        target_person: Optional[str] = None,
+        zakres_analizy: str = "pelny"
+    ) -> Dict[str, Any]:
+        """
+        Multimodalna analiza nagrania audio przez Gemini 3.6 Flash.
+        Odsłuchuje rzeczywiste audio i generuje precyzyjny profil dla tego konkretnego nagrania.
+        """
+        import os, base64, subprocess
+
+        # Jeśli plik to .wav, skonwertuj na lekki mp3 64k
+        mp3_path = audio_path
+        if audio_path.endswith(".wav"):
+            mp3_candidate = audio_path.rsplit(".", 1)[0] + ".mp3"
+            if not os.path.exists(mp3_candidate):
+                subprocess.run(
+                    ["ffmpeg", "-y", "-i", audio_path, "-b:a", "64k", mp3_candidate],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=True
+                )
+            mp3_path = mp3_candidate
+
+        with open(mp3_path, "rb") as f:
+            audio_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        target_info = f"Główny cel profilowania: {target_person}." if target_person else "Zidentyfikuj głównego badanego polityka/gościa."
+
+        prompt = f"""Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu PROFILER.
+Odsłuchaj dołączone nagranie audio. {target_info}
+ZAKRES PROFILOWANIA: {"PEŁNY AUDYT SZTABOWY (psychologia, mowa ciała, nielogiczności, marketing polityczny, warsztat)" if zakres_analizy == "pelny" else "TYLKO STAN PSYCHICZNY I BEHAWIORALNY"}.
+
+ZASADY AUDYTU SZTABOWEGO:
+1. BEZWZGLĘDNA CZUJNOŚĆ I BRAK TARYFY ULGOWEJ: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach, wyciekach emocjonalnych i nielogicznościach, zanim obnażą je wrogie sztaby i dziennikarze.
+2. DETEKCJA NIEPOŻĄDANYCH EMOCJI: Wskaż momenty irytacji, zniecierpliwienia, belferskiego protekcjonalizmu, uśmieszków wyższości/pogardy (AU14), tonu bezradności lub defensywnego ucinania wątków.
+3. DETEKCJA NIELOGICZNOŚCI I LUK W ARGUMENTACJI: Wskaż sprzeczności wewnętrzne, obietnice bez mechanizmu wdrożenia, myślenie życzeniowe i toporne uniki od pytań.
+4. AMUNICJA DLA OPONENTÓW: Wskaż sformułowania, które przeciwnicy wytną na złośliwe setki, rolki czy memy (tzw. samobóje).
+5. SKRYPTY KOREKCYJNE: Do wytkniętych błędów podaj gotową, bezpieczną ripostę sztabową („Zamiast X -> Mów Y”).
+6. WARSZTAT WYSTĄPIEŃ I EMISJI: Oceń tempo, intonację (unikanie uptalku), pauzy i wypełniacze.
+7. KALIBRACJA OCENY: Skompresuj ocenę punktową 1-10 w stronę środka skali (zazwyczaj 4–7/10 w zależności od skali uchybień; unikaj zawyżania do 8–10 oraz skrajnego 1–2).
+8. FORMAT JĘZYKOWY: Sentence case (tylko pierwsza litera zdania wielka). Odpowiedź formułuj zwięźle, esencjonalnie i z wysoką gęstością faktów.
+
+Zwróć poprawny JSON o schemacie:
+{{
+  "temat_rozmowy": "Zwięzły, 2-3 zdaniowy opis w sentence case, o czym dokładnie jest to nagranie i jakie główne wątki poruszono",
+  "rozpoznani_mowcy": [
+    {{
+      "speaker_tag": "SPEAKER_00",
+      "imie_nazwisko": "Imię i nazwisko",
+      "rola": "Dziennikarz / prowadzący | Badany polityk | Kontrkandydat",
+      "opis": "Zwięzły opis roli w rozmowie",
+      "jest_celem": true/false
+    }}
+  ],
+  "wybrany_speaker_tag": "SPEAKER_XX",
+  "wnioski": {{
+    "nastroje_i_emocje": "Esencjonalna diagnoza w sentence case nastroju, stabilności i energii badanego, z konkretnym cytatem i barwą głosu.",
+    "glowne_uniki_i_taktyka": "Zwięzła analiza taktyki rozmowy, narzucania tematów lub unikania odpowiedzi, z dosłownym cytatem.",
+    "czule_punkty_stres": "Dekonstrukcja momentów podwyższonego napięcia, wahań tempa lub przyspieszenia oddechu z cytatem.",
+    "spojnosc_mowy_ze_slowami": "Ocena czy ton, energia i modulacja głosu współgrają ze słowami, czy zdradzają wyuczoną formułkę lub dysonans.",
+    "sila_argumentacji": "Ocena logicznej spójności: proporcja twardych faktów i wyliczeń do frazesów i uników.",
+    "czy_odbiorcy_to_kupia": "Diagnoza odbioru przez przeciętnego widza: wiarygodność, nośność i naturalność przekazu.",
+    "pojedynek_z_adwersarzami": "Ocena kontroli nad sytuacją w studiu i reakcji na presję ze strony prowadzącego."
+  }},
+  "marketing_polityczny": {{
+    "werdykt": "Występ poprawny z zastrzeżeniami | Bilans mieszany ze wskazaniem na błędy | Sukces wizerunkowy | Porażka wizerunkowa",
+    "ocena_punktowa_1_10": 6,
+    "uzasadnienie_werdyktu": "Zwięzłe, bezkompromisowe uzasadnienie werdyktu: bilans zysków i strat, główne punkty krytyczne i przyczyna takiej noty.",
+    "glowne_plusy": [
+      {{
+        "nazwa_atutu": "Zwięzły tytuł atutu w sentence case",
+        "cytat_lub_moment": "Dosłowny cytat z nagrania",
+        "dlaczego_to_plus": "Precyzyjne wyjaśnienie psychologiczne i polityczne: jaki mechanizm zadziałał i co polityk zyskał."
+      }}
+    ],
+    "popelnione_bledy_i_minusy": [
+      {{
+        "nazwa_bledu": "Zwięzły tytuł błędu / uchybienia w sentence case",
+        "cytat_lub_moment": "Dosłowny cytat z nagrania pokazujący moment błędu",
+        "dlaczego_to_minus": "Krytyczna dekonstrukcja uchybienia: na jakie zarzuty naraża polityka to sformułowanie i jak zostanie odebrane."
+      }}
+    ],
+    "niepozadane_emocje_i_mowa_ciala": [
+      {{
+        "reakcja_lub_emocja": "Nazwa niepożądanej emocji (np. irytacja, uśmieszek wyższości, ton bezradności, zniecierpliwienie)",
+        "cytat_lub_moment": "Dosłowny cytat lub moment w nagraniu",
+        "dlaczego_to_szkodliwe": "Dlaczego liderowi nie wolno tego okazywać i jak odbiera to widz",
+        "zalecenie_sztabowe": "Konkretna wskazówka jak wygasić ten nawyk i utrzymać pokerową twarz"
+      }}
+    ],
+    "nielogicznosci_i_luki_argumentacyjne": [
+      {{
+        "luka_lub_sprzecznosc": "Nazwa błędu logicznego (np. obietnica bez pokrycia, sprzeczność celów, fałszywa analogia)",
+        "cytat_lub_moment": "Fragment wypowiedzi zawierający błąd logiczny",
+        "diagnoza_logiczna": "Na czym dokładnie polega brak logiki lub mechanizmu sprawczego",
+        "ryzyko_kontrataku": "Jak dziennikarz lub oponent może to jednym pytaniem zdemolować"
+      }}
+    ],
+    "amunicja_dla_oponentow": [
+      {{
+        "cytat_ryzykowny": "Niefortunny cytat ('samobój')",
+        "potencjalne_uderzenie_opozycji": "Jak sztab przeciwników wytnie i wykorzysta to sformułowanie w spotach i social mediach"
+      }}
+    ],
+    "gotowe_riposty_zamiast_bledow": [
+      {{
+        "kontekst_pytania": "Trudne pytanie dziennikarza lub wątek sporny",
+        "co_powiedzial": "Błędna lub defensywna odpowiedź polityka z nagrania",
+        "rekomendowana_riposta": "Gotowa, bezpieczna i sprawcza formuła sztabowa do wdrożenia"
+      }}
+    ],
+    "warsztat_mowy_i_dykcji": "Zwięzła ocena techniczna: tempo wypowiedzi, intonacja, pauzy, wypełniacze i nawyki emisyjne.",
+    "nosnosc_medialna_soundbites": "Zwięzła ocena najlepszej 'setki' z dosłownym cytatem do serwisów informacyjnych i social mediów.",
+    "wplyw_na_elektorat": {{
+      "twardy_elektorat": "Zwięzła diagnoza reakcji twardego elektoratu.",
+      "niezdecydowani": "Zwięzła diagnoza odbioru przez wyborców z centrum.",
+      "przeciwnicy": "Zwięzła diagnoza amunicji dla oponentów."
+    }},
+    "rekomendacje_sztabowe": [
+      "Konkretna dyrektywa sztabowa 1 przed kolejnym wywiadem",
+      "Konkretna dyrektywa sztabowa 2 przed kolejnym wywiadem",
+      "Konkretna dyrektywa sztabowa 3 przed kolejnym wywiadem"
+    ]
+  }}
+}}"""
+
+        url = f"{GEMINI_API_URL}?key={self.api_key}"
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"inline_data": {"mime_type": "audio/mp3", "data": audio_b64}},
+                        {"text": prompt}
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "response_mime_type": "application/json",
+                "temperature": 0.2
+            }
+        }
+
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code != 200:
+                raise RuntimeError(f"Błąd multimodalnej analizy Gemini ({resp.status_code}): {resp.text}")
+            
+            data = resp.json()
+            try:
+                text_content = data["candidates"][0]["content"]["parts"][0]["text"]
+                parsed = json.loads(text_content)
+                if isinstance(parsed, list) and len(parsed) > 0 and isinstance(parsed[0], dict):
+                    return parsed[0]
+                return parsed if isinstance(parsed, dict) else {}
+            except (KeyError, IndexError, json.JSONDecodeError) as e:
+                raise RuntimeError(f"Nie udało się sparsować odpowiedzi JSON z analizy audio: {str(e)}")
 
 gemini_profiler = GeminiProfilerService()
 

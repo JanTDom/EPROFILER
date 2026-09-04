@@ -12,6 +12,13 @@ const config: Config = {
         surface: "#0e131f", // ciemna stal
         surfaceHover: "#161e31",
         surfaceBorder: "#1e293b",
+        studio: {
+          bg: "#080a0f",
+          card: "#0d1322",
+          surface: "#0e1626",
+          border: "#1e293b",
+          hover: "#182338",
+        },
         cyanGlow: "#00f0ff",
         emeraldGlow: "#10b981",
         amberGlow: "#f59e0b",

@@ -74,6 +74,17 @@ export async function uploadRecordingFile(formData: FormData): Promise<Recording
   return res.json();
 }
 
+export async function retryRecording(recordingId: string): Promise<Recording> {
+  const res = await fetch(`${API_BASE}/api/recordings/${recordingId}/retry`, {
+    method: "POST",
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "Nie udało się wznowić przetwarzania nagrania.");
+  }
+  return res.json();
+}
+
 export function subscribeToProgress(
   recordingId: string,
   onUpdate: (data: ProgressEventPayload) => void,
@@ -113,4 +124,8 @@ export function subscribeToProgress(
 
 export function getVideoUrl(recordingId: string): string {
   return `${API_BASE}/api/media/${recordingId}/video`;
+}
+
+export function getRecordingPdfUrl(recordingId: string): string {
+  return `${API_BASE}/api/recordings/${recordingId}/pdf`;
 }

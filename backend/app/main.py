@@ -1,5 +1,12 @@
+import os
 import logging
 from contextlib import asynccontextmanager
+import certifi
+
+# Globalne ustawienie certyfikatów CA dla zapytań SSL w środowisku macOS (naprawia CERTIFICATE_VERIFY_FAILED)
+os.environ.setdefault("SSL_CERT_FILE", certifi.where())
+os.environ.setdefault("REQUESTS_CA_BUNDLE", certifi.where())
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings

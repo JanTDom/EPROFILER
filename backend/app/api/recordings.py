@@ -1,16 +1,38 @@
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Any, Dict
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import select, desc
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
-from app.db.models import Recording
+from app.db.models import Recording, PsychometricProfile
 from app.services.storage import storage_service
 from app.workers.queue import task_queue
 from app.workers.tasks import run_pipeline_step_by_step
 
 router = APIRouter(prefix="/api/recordings", tags=["recordings"])
+
+class PsychometricProfileResponse(BaseModel):
+    id: str
+    recording_id: str
+    otwartosc: Optional[int] = 50
+    sumiennosc: Optional[int] = 50
+    ekstrawersja: Optional[int] = 50
+    ugodowosc: Optional[int] = 50
+    neurotyzm: Optional[int] = 50
+    nastroj_glowny_prosty: str
+    styl_komunikacji_prosty: str
+    czule_punkty_i_leki: Optional[List[Any]] = []
+    mocne_strony: Optional[List[Any]] = []
+    glowne_uniki_i_taktyka: Optional[str] = None
+    spojnosc_mowy_ze_slowami: Optional[str] = None
+    skutecznosc_argumentacji: Optional[str] = None
+    perswazyjnosc_odbiorcow: Optional[str] = None
+    radzenie_z_adwersarzami: Optional[str] = None
+    surowe_wnioski_ai: Optional[Dict[str, Any]] = None
+
+    model_config = ConfigDict(from_attributes=True)
 
 class RecordingResponse(BaseModel):
     id: str
@@ -30,6 +52,7 @@ class RecordingResponse(BaseModel):
     rola_polityka: Optional[str] = "Badany polityk"
     speaker_docelowy_tag: Optional[str] = None
     rozpoznani_mowcy: Optional[List[dict]] = None
+    psychometric_profile: Optional[PsychometricProfileResponse] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -51,13 +74,13 @@ class SetTargetSpeakerRequest(BaseModel):
 
 @router.get("", response_model=List[RecordingResponse])
 async def list_recordings(db: AsyncSession = Depends(get_db)):
-    stmt = select(Recording).order_by(desc(Recording.created_at))
+    stmt = select(Recording).options(selectinload(Recording.psychometric_profile)).order_by(desc(Recording.created_at))
     result = await db.execute(stmt)
     return result.scalars().all()
 
 @router.get("/{recording_id}", response_model=RecordingResponse)
 async def get_recording(recording_id: str, db: AsyncSession = Depends(get_db)):
-    stmt = select(Recording).where(Recording.id == recording_id)
+    stmt = select(Recording).options(selectinload(Recording.psychometric_profile)).where(Recording.id == recording_id)
     result = await db.execute(stmt)
     rec = result.scalar_one_or_none()
     if not rec:
@@ -143,7 +166,7 @@ async def set_target_speaker(
     """
     Pozwala zdefiniować lub zmienić cel profilowania (który mówca jest badanym politykiem).
     """
-    stmt = select(Recording).where(Recording.id == recording_id)
+    stmt = select(Recording).options(selectinload(Recording.psychometric_profile)).where(Recording.id == recording_id)
     result = await db.execute(stmt)
     rec = result.scalar_one_or_none()
     if not rec:
@@ -167,9 +190,60 @@ async def set_target_speaker(
             updated_mowcy.append(item)
         rec.rozpoznani_mowcy = updated_mowcy
 
+    rec.status_przetwarzania = "PROFILOWANIE_AI"
+    rec.krok_postepu = f"Przeprowadzanie profilowania dla: {rec.polityk_docelowy or payload.speaker_tag}..."
     await db.commit()
     await db.refresh(rec)
+
+    task_queue.enqueue(run_pipeline_step_by_step, rec.id)
     return rec
+
+@router.post("/{recording_id}/retry", response_model=RecordingResponse)
+async def retry_recording_pipeline(recording_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Wznawia lub ponawia przetwarzanie nagrania od miejsca, w którym zostało przerwane.
+    """
+    stmt = select(Recording).options(selectinload(Recording.psychometric_profile)).where(Recording.id == recording_id)
+    result = await db.execute(stmt)
+    rec = result.scalar_one_or_none()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Nagranie nie zostało znalezione.")
+
+    rec.status_przetwarzania = "PRZETWARZANIE"
+    rec.krok_postepu = "Wznawianie przetwarzania materiału..."
+    rec.blad = None
+    await db.commit()
+    await db.refresh(rec)
+
+    task_queue.enqueue(run_pipeline_step_by_step, rec.id)
+    return rec
+
+@router.get("/{recording_id}/pdf")
+async def download_recording_pdf(recording_id: str, db: AsyncSession = Depends(get_db)):
+    """
+    Generuje i zwraca elegancki plik PDF z audytem wizerunkowym, marketingiem politycznym i profilowaniem.
+    """
+    from fastapi.responses import StreamingResponse
+    from app.services.pdf_generator import pdf_generator
+    import io
+
+    stmt = select(Recording).options(selectinload(Recording.psychometric_profile)).where(Recording.id == recording_id)
+    result = await db.execute(stmt)
+    rec = result.scalar_one_or_none()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Nagranie nie zostało znalezione.")
+
+    pdf_bytes = pdf_generator.generate(rec)
+    safe_name = "".join(c for c in (rec.polityk_docelowy or "raport") if c.isalnum() or c in ("-", "_")).strip() or "raport"
+    filename = f"PROFILER_{safe_name}_{recording_id[:8]}.pdf"
+
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )
 
 @router.delete("/{recording_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_recording(recording_id: str, db: AsyncSession = Depends(get_db)):

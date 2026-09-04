@@ -7,6 +7,7 @@ export type ProcessingStatus =
   | "TRANSKODOWANIE"
   | "EKSTRAKCJA_AUDIO"
   | "GOTOWE_DO_TRANSKRYPCJI"
+  | "PROFILOWANIE_AI"
   | "TRANSKRYPCJA"
   | "DIARYZACJA"
   | "RETORYKA"
@@ -42,6 +43,7 @@ export interface Recording {
   rola_polityka?: string;
   speaker_docelowy_tag?: string;
   rozpoznani_mowcy?: DetectedSpeaker[];
+  psychometric_profile?: PsychometricProfile;
   created_at: string;
 }
 
@@ -106,21 +108,88 @@ export interface CongruenceEvent {
   wyjasnienie_proste: string;
 }
 
+export interface MarketingPlusItem {
+  nazwa_atutu: string;
+  cytat_lub_moment?: string;
+  dlaczego_to_plus: string;
+}
+
+export interface MarketingMinusItem {
+  nazwa_bledu: string;
+  cytat_lub_moment?: string;
+  dlaczego_to_minus: string;
+}
+
+export interface MarketingUnwantedEmotionItem {
+  reakcja_lub_emocja: string;
+  cytat_lub_moment?: string;
+  dlaczego_to_szkodliwe: string;
+  zalecenie_sztabowe: string;
+}
+
+export interface MarketingLogicalLapseItem {
+  luka_lub_sprzecznosc: string;
+  cytat_lub_moment?: string;
+  diagnoza_logiczna: string;
+  ryzyko_kontrataku: string;
+}
+
+export interface MarketingOpponentAmmunitionItem {
+  cytat_ryzykowny: string;
+  potencjalne_uderzenie_opozycji: string;
+}
+
+export interface MarketingCorrectiveScriptItem {
+  kontekst_pytania: string;
+  co_powiedzial: string;
+  rekomendowana_riposta: string;
+}
+
+export interface PoliticalMarketingData {
+  werdykt: "Sukces wizerunkowy" | "Bilans mieszany ze wskazaniem" | "Porażka wizerunkowa" | "Występ poprawny z zastrzeżeniami" | "Bilans mieszany ze wskazaniem na błędy" | string;
+  ocena_punktowa_1_10: number;
+  uzasadnienie_werdyktu: string;
+  glowne_plusy: Array<MarketingPlusItem | string>;
+  popelnione_bledy_i_minusy: Array<MarketingMinusItem | string>;
+  niepozadane_emocje_i_mowa_ciala?: MarketingUnwantedEmotionItem[];
+  nielogicznosci_i_luki_argumentacyjne?: MarketingLogicalLapseItem[];
+  amunicja_dla_oponentow?: MarketingOpponentAmmunitionItem[];
+  gotowe_riposty_zamiast_bledow?: MarketingCorrectiveScriptItem[];
+  warsztat_mowy_i_dykcji?: string;
+  nosnosc_medialna_soundbites: string | string[];
+  wplyw_na_elektorat: {
+    twardy_elektorat?: string;
+    niezdecydowani?: string;
+    przeciwnicy?: string;
+  };
+  rekomendacje_sztabowe: string[];
+}
+
 export interface PsychometricProfile {
   id: string;
   recording_id: string;
-  otwartosc: number;
-  sumiennosc: number;
-  ekstrawersja: number;
-  ugodowosc: number;
-  neurotyzm: number;
-  dominacja_vs_uleglosc: number;
-  wrogosc_vs_cieplo: number;
+  otwartosc?: number;
+  sumiennosc?: number;
+  ekstrawersja?: number;
+  ugodowosc?: number;
+  neurotyzm?: number;
+  dominacja_vs_uleglosc?: number;
+  wrogosc_vs_cieplo?: number;
+  wynik_ogolny?: number;
+  podsumowanie_ai_proste?: string;
   nastroj_glowny_prosty: string;
   styl_komunikacji_prosty: string;
   czule_punkty_i_leki: string[];
   mocne_strony: string[];
+  glowne_uniki_i_taktyka?: string;
+  spojnosc_mowy_ze_slowami?: string;
   skutecznosc_argumentacji?: string;
   perswazyjnosc_odbiorcow?: string;
   radzenie_z_adwersarzami?: string;
+  surowe_wnioski_ai?: {
+    temat_rozmowy?: string;
+    marketing_polityczny?: PoliticalMarketingData;
+    wnioski?: Record<string, string>;
+    [key: string]: any;
+  };
 }

@@ -77,7 +77,7 @@ class Recording(Base):
     interactions = relationship("Interaction", back_populates="recording", cascade="all, delete-orphan")
     biometric_events = relationship("BiometricEvent", back_populates="recording", cascade="all, delete-orphan")
     congruence_events = relationship("CongruenceEvent", back_populates="recording", cascade="all, delete-orphan")
-    psychometric_profile = relationship("PsychometricProfile", back_populates="recording", uselist=False, cascade="all, delete-orphan")
+    psychometric_profile = relationship("PsychometricProfile", back_populates="recording", uselist=False, cascade="all, delete-orphan", lazy="selectin")
     report = relationship("Report", back_populates="recording", uselist=False, cascade="all, delete-orphan")
 
 
@@ -275,9 +275,12 @@ class PsychometricProfile(Base):
     mocne_strony = Column(JSON, default=list) # w czym mówca był opanowany i skuteczny
 
     # Nowe pola dla trybu "Oceń wszystko" (argumentacja, perswazja, adwersarze):
+    glowne_uniki_i_taktyka = Column(Text, nullable=True) # jak polityk odpowiada na pytania
+    spojnosc_mowy_ze_slowami = Column(Text, nullable=True) # zgodność tonu głosu z treścią
     skutecznosc_argumentacji = Column(Text, nullable=True) # prosta ocena logiki vs frazesów
     perswazyjnosc_odbiorcow = Column(Text, nullable=True) # czy wyborcy/widzowie to kupią i dlaczego
     radzenie_z_adwersarzami = Column(Text, nullable=True) # bilans pojedynku (dominacja vs defensywa)
+    surowe_wnioski_ai = Column(JSON, default=dict) # kompletny obiekt wniosków z modelu Gemini
 
     recording = relationship("Recording", back_populates="psychometric_profile")
 

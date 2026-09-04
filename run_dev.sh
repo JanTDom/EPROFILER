@@ -28,8 +28,12 @@ echo "Backend API:  http://localhost:8000 (Swagger: http://localhost:8000/docs)"
 echo "Frontend Web: http://localhost:3000"
 echo ""
 
-# Uruchom Backend i Frontend równolegle
-trap 'kill %1; kill %2' SIGINT
+# Eksportuj ścieżkę certyfikatów CA dla macOS (rozwiązuje SSL: CERTIFICATE_VERIFY_FAILED w yt-dlp)
+CERT_PATH=$(backend/venv/bin/python -c "import certifi; print(certifi.where())" 2>/dev/null || true)
+if [ -n "$CERT_PATH" ]; then
+    export SSL_CERT_FILE="$CERT_PATH"
+    export REQUESTS_CA_BUNDLE="$CERT_PATH"
+fi
 
 PYTHONPATH=backend backend/venv/bin/uvicorn app.main:app --reload --port 8000 &
 (cd frontend && npm run dev) &

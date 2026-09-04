@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { fetchRecording, setTargetSpeaker } from "@/lib/api";
+import { fetchRecording, setTargetSpeaker, retryRecording, getRecordingPdfUrl } from "@/lib/api";
 import { Recording, DetectedSpeaker } from "@/lib/types";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import { VideoPlayer } from "@/components/VideoPlayer";
@@ -26,6 +26,13 @@ import {
   Check,
   Edit2,
   Radio,
+  Download,
+  Award,
+  ThumbsUp,
+  ThumbsDown,
+  Flame,
+  Target,
+  Compass,
 } from "lucide-react";
 
 export default function RecordingDetailPage() {
@@ -71,6 +78,15 @@ export default function RecordingDetailPage() {
       setIsSwitchingSpeaker(false);
     } catch (err: any) {
       setSwitchingError(err.message || "Nie udało się zmienić celu profilowania.");
+    }
+  };
+
+  const handleRetry = async () => {
+    try {
+      const updated = await retryRecording(id);
+      setRecording(updated);
+    } catch (err: any) {
+      setError(err.message || "Nie udało się wznowić przetwarzania.");
     }
   };
 
@@ -124,8 +140,8 @@ export default function RecordingDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Pasek nawigacji wstecz */}
-      <div className="flex items-center justify-between pb-4 border-b border-studio-border/70">
+      {/* Pasek nawigacji wstecz i akcji */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-studio-border/70">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-cyan-400 transition-colors"
@@ -134,14 +150,27 @@ export default function RecordingDetailPage() {
           Wszystkie nagrania
         </Link>
 
-        <button
-          onClick={loadData}
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-cyan-400 bg-studio-surface/80 px-3 py-1.5 rounded-lg border border-studio-border/60 transition-colors"
-          title="Odśwież stan"
-        >
-          <RefreshCw className="w-3 h-3" />
-          Odśwież telemetrię
-        </button>
+        <div className="flex items-center gap-2.5">
+          {/* Przycisk pobierania eleganckiego raportu PDF */}
+          <a
+            href={getRecordingPdfUrl(recording.id)}
+            download
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-300 hover:to-blue-300 px-3.5 py-1.5 rounded-lg shadow-glow-cyan transition-all"
+            title="Pobierz elegancki raport audytu politycznego w formacie PDF"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Pobierz raport PDF
+          </a>
+
+          <button
+            onClick={loadData}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-cyan-400 bg-studio-surface/80 px-3 py-1.5 rounded-lg border border-studio-border/60 transition-colors"
+            title="Odśwież stan"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Odśwież telemetrię
+          </button>
+        </div>
       </div>
 
       {/* Nagłówek materiału */}
@@ -149,26 +178,26 @@ export default function RecordingDetailPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="text-[10px] uppercase font-mono font-bold tracking-wider px-2.5 py-0.5 bg-cyan-950/70 text-cyan-300 border border-cyan-500/40 rounded-full flex items-center gap-1.5">
+              <span className="text-[10px] font-mono font-bold tracking-wider px-2.5 py-0.5 bg-cyan-950/70 text-cyan-300 border border-cyan-500/40 rounded-full flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                PROFILER STUDIO
+                Profiler studio
               </span>
-              <span className="text-[10px] uppercase font-mono px-2.5 py-0.5 bg-slate-800/80 text-slate-300 border border-studio-border rounded-full">
+              <span className="text-[10px] font-mono px-2.5 py-0.5 bg-slate-800/80 text-slate-300 border border-studio-border rounded-full">
                 {recording.typ_nagrania}
               </span>
               {recording.zakres_analizy === "behawioralny" ? (
                 <span className="text-[10px] font-mono text-purple-300 bg-purple-950/40 px-2.5 py-0.5 border border-purple-500/40 rounded-full">
-                  Zakres: Tylko stan psychiczny i zachowanie
+                  Zakres: tylko stan psychiczny i zachowanie
                 </span>
               ) : (
                 <span className="text-[10px] font-mono text-emerald-300 bg-emerald-950/40 px-2.5 py-0.5 border border-emerald-500/40 rounded-full">
-                  Zakres: Pełny 360° (Zachowanie + Perswazja + Starcie)
+                  Zakres: pełny 360° (zachowanie, perswazja, starcie)
                 </span>
               )}
               {recording.tryb_biometryczny !== false && (
                 <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/40 px-2.5 py-0.5 border border-cyan-500/30 rounded-full flex items-center gap-1">
                   <Eye className="w-3 h-3 text-cyan-400" />
-                  Biometria & Mimika FACS
+                  Biometria i mimika FACS
                 </span>
               )}
             </div>
@@ -322,8 +351,8 @@ export default function RecordingDetailPage() {
           {isReady ? (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-blue-600" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5 text-cyan-400" />
                   Podgląd wideo z inspektorem mikroekspresji
                 </span>
                 <span className="text-[11px] text-slate-500 font-mono">
@@ -332,117 +361,658 @@ export default function RecordingDetailPage() {
               </div>
               <VideoPlayer recordingId={recording.id} />
             </div>
+          ) : recording.status_przetwarzania === "BLAD" ? (
+            <div className="aspect-video bg-studio-card/95 border border-red-500/50 rounded-2xl flex flex-col items-center justify-center text-center p-6 text-slate-300 shadow-2xl backdrop-blur-xl">
+              <AlertTriangle className="w-12 h-12 text-red-400 mb-3 animate-pulse" />
+              <p className="text-sm font-bold text-red-300">
+                Wystąpił problem podczas przetwarzania
+              </p>
+              <p className="text-xs text-slate-400 mt-1 max-w-md leading-relaxed font-mono">
+                {recording.blad || "Błąd pobierania lub transkodowania materiału."}
+              </p>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="mt-4 px-5 py-2.5 bg-gradient-to-r from-red-600 to-amber-600 hover:from-red-500 hover:to-amber-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all"
+              >
+                Wznów przetwarzanie (Retry)
+              </button>
+            </div>
           ) : (
-            <div className="aspect-video bg-slate-900 border border-slate-800 flex flex-col items-center justify-center text-center p-6 text-slate-400">
-              <Activity className="w-10 h-10 text-blue-500 mb-3 animate-pulse" />
+            <div className="aspect-video bg-studio-card/90 border border-studio-border/80 rounded-2xl flex flex-col items-center justify-center text-center p-6 text-slate-400 shadow-xl backdrop-blur-xl">
+              <Activity className="w-10 h-10 text-cyan-400 mb-3 animate-pulse" />
               <p className="text-xs font-semibold text-slate-200">
                 PROFILER przetwarza materiał wideo...
               </p>
               <p className="text-[11px] text-slate-400 mt-1 max-w-sm">
                 Generujemy zoptymalizowany podgląd 720p oraz ścieżkę dźwiękową 16kHz do analizy drżenia głosu i transkrypcji.
               </p>
+              <button
+                type="button"
+                onClick={handleRetry}
+                className="mt-4 px-3 py-1.5 bg-studio-surface hover:bg-studio-surface/80 border border-studio-border hover:border-cyan-400 text-slate-300 hover:text-cyan-300 text-[11px] rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3 h-3" /> Wznów jeśli proces uległ przerwaniu
+              </button>
             </div>
           )}
 
-          {/* KARTY PROSTEGO JĘZYKA (Co mówi i zdradza rozmówca) */}
+          {/* BILANS WIZERUNKOWY I MARKETING POLITYCZNY */}
+          {recording.psychometric_profile && (
+            <div className="bg-studio-card/90 border border-studio-border/80 p-6 rounded-2xl shadow-2xl backdrop-blur-xl space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-studio-border/70">
+                <div className="flex items-center gap-2.5">
+                  <Award className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <div>
+                    <h3 className="text-sm font-bold text-white">
+                      Bilans wizerunkowy i marketing polityczny
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Ocena skuteczności, błędy narracyjne, nośność medialna i rekomendacje sztabowe
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">
+                    Badany: {targetName}
+                  </span>
+                </div>
+              </div>
+
+              {/* Werdykt i ocena punktowa 1-10 */}
+              {(() => {
+                const marketing = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny;
+                const score = marketing?.ocena_punktowa_1_10 ?? (recording.psychometric_profile?.wynik_ogolny ? Math.round(recording.psychometric_profile.wynik_ogolny / 10) : 7);
+                const verdict = marketing?.werdykt || "Występ poprawny / Realizacja założeń partyjnych";
+                const rationale = marketing?.uzasadnienie_werdyktu || recording.psychometric_profile?.podsumowanie_ai_proste;
+                
+                const scoreColor = score >= 8 
+                  ? "from-emerald-500/20 to-teal-500/10 border-emerald-500/40 text-emerald-300"
+                  : score >= 5
+                  ? "from-amber-500/20 to-yellow-500/10 border-amber-500/40 text-amber-300"
+                  : "from-rose-500/20 to-red-500/10 border-rose-500/40 text-rose-300";
+
+                return (
+                  <div className={`p-5 rounded-xl border bg-gradient-to-br ${scoreColor} space-y-3`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block mb-1">
+                          Werdykt profilera
+                        </span>
+                        <h4 className="text-base font-bold text-white">
+                          {verdict}
+                        </h4>
+                      </div>
+                      <div className="flex items-center gap-2 self-start sm:self-center px-4 py-2 bg-slate-950/70 border border-white/10 rounded-xl shadow-inner">
+                        <span className="text-[11px] text-slate-400 uppercase font-semibold">Ocena:</span>
+                        <span className="text-2xl font-black font-mono tracking-tight text-white">
+                          {score}<span className="text-sm font-normal text-slate-400">/10</span>
+                        </span>
+                      </div>
+                    </div>
+                    {rationale && (
+                      <p className="text-xs text-slate-200 leading-relaxed pt-2 border-t border-white/10">
+                        {rationale}
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* Dwie kolumny: Co zadziałało (plusy) vs Co zaszkodziło i popełnione błędy (minusy) */}
+              {(() => {
+                const marketing = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny;
+                const plusy = (marketing?.glowne_plusy && marketing.glowne_plusy.length > 0)
+                  ? marketing.glowne_plusy
+                  : (recording.psychometric_profile?.mocne_strony ?? []);
+                const minusy = (marketing?.popelnione_bledy_i_minusy && marketing.popelnione_bledy_i_minusy.length > 0)
+                  ? marketing.popelnione_bledy_i_minusy
+                  : (recording.psychometric_profile?.czule_punkty_i_leki ?? []);
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Kolumna Plusy */}
+                    <div className="p-4 bg-emerald-950/20 border border-emerald-500/30 rounded-xl space-y-3">
+                      <div className="flex items-center gap-2 font-bold text-emerald-300 text-xs pb-2 border-b border-emerald-500/20">
+                        <ThumbsUp className="w-4 h-4 text-emerald-400" />
+                        <span>Co zadziałało na korzyść (plusy)</span>
+                      </div>
+                      <div className="space-y-3">
+                        {plusy.length > 0 ? (
+                          plusy.map((item: any, idx: number) => {
+                            let title = "Atut wizerunkowy";
+                            let quote = "";
+                            let reason = "";
+
+                            if (typeof item === "object" && item !== null) {
+                              title = item.nazwa_atutu || item.tytul || item.punkt || "Atut wizerunkowy";
+                              quote = item.cytat_lub_moment || item.cytat || "";
+                              reason = item.dlaczego_to_plus || item.wyjasnienie || item.efekt_wizerunkowy || "";
+                            } else {
+                              const str = String(item || "");
+                              const qm = str.match(/[:\s][„"']([^"”']{6,})[”"']/);
+                              quote = qm ? qm[1] : "";
+                              const parts = str.split(/[:–—]/);
+                              title = parts.length > 1 ? parts[0].replace(/^\d+[\.\)]\s*/, "").trim() : "Mocny element przekazu";
+                              reason = parts.length > 1 ? parts.slice(1).join(":").trim() : str;
+                            }
+
+                            return (
+                              <div key={idx} className="bg-slate-900/60 p-3.5 rounded-xl border border-emerald-500/20 space-y-2.5">
+                                <div className="flex items-start gap-2">
+                                  <span className="p-1 rounded bg-emerald-500/20 text-emerald-300 flex-shrink-0 mt-0.5">
+                                    <Check className="w-3.5 h-3.5" />
+                                  </span>
+                                  <div className="min-w-0">
+                                    <span className="text-[10px] uppercase font-mono font-bold text-emerald-400/80 block">
+                                      Atut #{idx + 1}
+                                    </span>
+                                    <h5 className="text-xs font-bold text-slate-100 leading-snug">
+                                      {title}
+                                    </h5>
+                                  </div>
+                                </div>
+
+                                {quote && (
+                                  <div className="pl-3 border-l-2 border-cyan-500/50 bg-cyan-950/20 p-2 rounded-r-lg">
+                                    <span className="text-[9px] font-mono uppercase text-cyan-400 font-bold block mb-0.5">
+                                      Cytat z nagrania:
+                                    </span>
+                                    <blockquote className="text-[11px] text-slate-200 italic leading-relaxed">
+                                      „{quote}”
+                                    </blockquote>
+                                  </div>
+                                )}
+
+                                {reason && (
+                                  <div className="space-y-1 bg-emerald-950/25 p-2.5 rounded-lg border border-emerald-500/15">
+                                    <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wide flex items-center gap-1.5">
+                                      <Sparkles className="w-3 h-3 text-emerald-400" />
+                                      Dlaczego to zadziałało (analiza werdyktu):
+                                    </span>
+                                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                                      {reason}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">Brak wyraźnych przewag wizerunkowych.</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Kolumna Minusy i błędy */}
+                    <div className="p-4 bg-rose-950/20 border border-rose-500/30 rounded-xl space-y-3">
+                      <div className="flex items-center gap-2 font-bold text-rose-300 text-xs pb-2 border-b border-rose-500/20">
+                        <ThumbsDown className="w-4 h-4 text-rose-400" />
+                        <span>Co zaszkodziło i popełnione błędy (minusy)</span>
+                      </div>
+                      <div className="space-y-3">
+                        {minusy.length > 0 ? (
+                          minusy.map((item: any, idx: number) => {
+                            let title = "Uchybienie wizerunkowe";
+                            let quote = "";
+                            let reason = "";
+
+                            if (typeof item === "object" && item !== null) {
+                              title = item.nazwa_bledu || item.tytul || item.blad || "Błąd lub ryzyko wizerunkowe";
+                              quote = item.cytat_lub_moment || item.cytat || "";
+                              reason = item.dlaczego_to_minus || item.wyjasnienie || item.ryzyko_polityczne || "";
+                            } else {
+                              const str = String(item || "");
+                              const qm = str.match(/[:\s][„"']([^"”']{6,})[”"']/);
+                              quote = qm ? qm[1] : "";
+                              const parts = str.split(/[:–—]/);
+                              title = parts.length > 1 ? parts[0].replace(/^\d+[\.\)]\s*/, "").trim() : "Uchybienie w wypowiedzi";
+                              reason = parts.length > 1 ? parts.slice(1).join(":").trim() : str;
+                            }
+
+                            return (
+                              <div key={idx} className="bg-slate-900/60 p-3.5 rounded-xl border border-rose-500/20 space-y-2.5">
+                                <div className="flex items-start gap-2">
+                                  <span className="p-1 rounded bg-rose-500/20 text-rose-400 flex-shrink-0 mt-0.5">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                  </span>
+                                  <div className="min-w-0">
+                                    <span className="text-[10px] uppercase font-mono font-bold text-rose-400/80 block">
+                                      Błąd #{idx + 1}
+                                    </span>
+                                    <h5 className="text-xs font-bold text-slate-100 leading-snug">
+                                      {title}
+                                    </h5>
+                                  </div>
+                                </div>
+
+                                {quote && (
+                                  <div className="pl-3 border-l-2 border-amber-500/50 bg-amber-950/20 p-2 rounded-r-lg">
+                                    <span className="text-[9px] font-mono uppercase text-amber-400 font-bold block mb-0.5">
+                                      Cytat z nagrania:
+                                    </span>
+                                    <blockquote className="text-[11px] text-slate-200 italic leading-relaxed">
+                                      „{quote}”
+                                    </blockquote>
+                                  </div>
+                                )}
+
+                                {reason && (
+                                  <div className="space-y-1 bg-rose-950/25 p-2.5 rounded-lg border border-rose-500/15">
+                                    <span className="text-[10px] font-bold text-rose-300 uppercase tracking-wide flex items-center gap-1.5">
+                                      <Flame className="w-3 h-3 text-rose-400" />
+                                      Dlaczego to zaszkodziło (analiza werdyktu):
+                                    </span>
+                                    <p className="text-[11px] text-slate-300 leading-relaxed">
+                                      {reason}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <p className="text-xs text-slate-400 italic">Brak rażących błędów lub utraty panowania nad przekazem.</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Ostrzeżenia sztabowe: Niepożądane emocje i mowa ciała */}
+              {(() => {
+                const emocje = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny?.niepozadane_emocje_i_mowa_ciala;
+                if (!emocje || emocje.length === 0) return null;
+
+                return (
+                  <div className="p-4 bg-red-950/20 border border-red-500/40 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-red-300 text-xs pb-2 border-b border-red-500/20">
+                      <AlertTriangle className="w-4 h-4 text-red-400" />
+                      <span>Niepożądane emocje i wycieki mowy ciała (ostrzeżenia sztabowe)</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {emocje.map((item: any, idx: number) => (
+                        <div key={idx} className="bg-slate-900/70 p-3.5 rounded-xl border border-red-500/20 space-y-2">
+                          <div className="flex items-center gap-2 text-xs font-bold text-red-300">
+                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                            <span>{item.reakcja_lub_emocja}</span>
+                          </div>
+                          {item.cytat_lub_moment && (
+                            <blockquote className="text-[11px] text-slate-300 italic border-l-2 border-red-500/40 pl-2">
+                              „{item.cytat_lub_moment}”
+                            </blockquote>
+                          )}
+                          <p className="text-[11px] text-slate-300 leading-relaxed">
+                            <strong className="text-red-400 font-medium">Dlaczego to błąd: </strong>
+                            {item.dlaczego_to_szkodliwe}
+                          </p>
+                          <div className="p-2 bg-slate-950/60 rounded border border-white/5 text-[11px] text-emerald-300">
+                            <strong>Zalecenie sztabowe: </strong> {item.zalecenie_sztabowe}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Audyt nielogiczności i luk w argumentacji */}
+              {(() => {
+                const luki = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny?.nielogicznosci_i_luki_argumentacyjne;
+                if (!luki || luki.length === 0) return null;
+
+                return (
+                  <div className="p-4 bg-amber-950/20 border border-amber-500/30 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-amber-300 text-xs pb-2 border-b border-amber-500/20">
+                      <Target className="w-4 h-4 text-amber-400" />
+                      <span>Audyt nielogiczności i luk w argumentacji (luki dowodowe)</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {luki.map((item: any, idx: number) => (
+                        <div key={idx} className="bg-slate-900/70 p-3.5 rounded-xl border border-amber-500/20 space-y-2">
+                          <h5 className="text-xs font-bold text-amber-200">{item.luka_lub_sprzecznosc}</h5>
+                          {item.cytat_lub_moment && (
+                            <blockquote className="text-[11px] text-slate-300 italic border-l-2 border-amber-500/40 pl-2">
+                              „{item.cytat_lub_moment}”
+                            </blockquote>
+                          )}
+                          <p className="text-[11px] text-slate-300 leading-relaxed">
+                            <strong className="text-amber-400 font-medium">Diagnoza logiczna: </strong>
+                            {item.diagnoza_logiczna}
+                          </p>
+                          <div className="p-2 bg-slate-950/60 rounded border border-white/5 text-[11px] text-rose-300">
+                            <strong>Ryzyko kontrataku: </strong> {item.ryzyko_kontrataku}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Skrypty korekcyjne (Zamiast X -> Mów Y) */}
+              {(() => {
+                const skrypty = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny?.gotowe_riposty_zamiast_bledow;
+                if (!skrypty || skrypty.length === 0) return null;
+
+                return (
+                  <div className="p-4 bg-indigo-950/20 border border-indigo-500/30 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-indigo-300 text-xs pb-2 border-b border-indigo-500/20">
+                      <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                      <span>Skrypty korekcyjne sztabu („Zamiast... Powiedz...”)</span>
+                    </div>
+                    <div className="space-y-3">
+                      {skrypty.map((item: any, idx: number) => (
+                        <div key={idx} className="p-3.5 bg-slate-900/70 border border-indigo-500/20 rounded-xl space-y-2">
+                          <div className="text-[10px] font-mono text-indigo-400 font-semibold uppercase">
+                            Kontekst / trudne pytanie: {item.kontekst_pytania}
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                            <div className="p-2.5 bg-rose-950/30 border border-rose-500/30 rounded-lg">
+                              <span className="text-[10px] text-rose-400 uppercase font-bold block mb-1">Co powiedział (błąd):</span>
+                              <p className="text-slate-300 italic">„{item.co_powiedzial}”</p>
+                            </div>
+                            <div className="p-2.5 bg-emerald-950/30 border border-emerald-500/30 rounded-lg">
+                              <span className="text-[10px] text-emerald-400 uppercase font-bold block mb-1">Rekomendowana riposta sztabowa:</span>
+                              <p className="text-emerald-100 font-medium">„{item.rekomendowana_riposta}”</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Amunicja dla oponentów */}
+              {(() => {
+                const ammo = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny?.amunicja_dla_oponentow;
+                if (!ammo || ammo.length === 0) return null;
+
+                return (
+                  <div className="p-4 bg-studio-surface/50 border border-rose-500/30 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-rose-300 text-xs">
+                      <Flame className="w-4 h-4 text-rose-400" />
+                      <span>Amunicja dla oponentów (ryzyko wycięć i ataków w social mediach)</span>
+                    </div>
+                    <div className="space-y-2">
+                      {ammo.map((item: any, idx: number) => (
+                        <div key={idx} className="p-3 bg-slate-900/70 border border-rose-500/20 rounded-lg space-y-1.5">
+                          <blockquote className="text-xs text-rose-200 italic">
+                            „{item.cytat_ryzykowny}”
+                          </blockquote>
+                          <p className="text-[11px] text-slate-300 leading-relaxed">
+                            <strong className="text-rose-400">Jak uderzy opozycja: </strong>
+                            {item.potencjalne_uderzenie_opozycji}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Warsztat mowy i emisji głosu */}
+              {(() => {
+                const warsztat = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny?.warsztat_mowy_i_dykcji;
+                if (!warsztat) return null;
+
+                return (
+                  <div className="p-4 bg-slate-900/60 border border-teal-500/30 rounded-xl space-y-2">
+                    <div className="flex items-center gap-2 font-bold text-teal-300 text-xs">
+                      <Radio className="w-4 h-4 text-teal-400" />
+                      <span>Warsztat wystąpień publicznych i emisja głosu</span>
+                    </div>
+                    <p className="text-xs text-slate-200 leading-relaxed">
+                      {warsztat}
+                    </p>
+                  </div>
+                );
+              })()}
+
+              {/* Nośność medialna i soundbites */}
+              {(() => {
+                const soundbitesRaw = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny?.nosnosc_medialna_soundbites;
+                if (!soundbitesRaw || (Array.isArray(soundbitesRaw) && soundbitesRaw.length === 0)) return null;
+                const soundbites = Array.isArray(soundbitesRaw) ? soundbitesRaw : [soundbitesRaw];
+
+                return (
+                  <div className="p-4 bg-studio-surface/50 border border-amber-500/30 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-amber-300 text-xs">
+                      <Flame className="w-4 h-4 text-amber-400" />
+                      <span>Nośność medialna i „setki” do wycięć telewizyjnych</span>
+                    </div>
+                    <div className="space-y-2">
+                      {soundbites.map((sb: any, idx: number) => {
+                        const quote = typeof sb === "string" ? sb : (sb.cytat || JSON.stringify(sb));
+                        return (
+                          <div key={idx} className="p-3 bg-slate-900/70 border border-amber-500/20 rounded-lg space-y-1">
+                            <div className="text-[10px] font-mono text-amber-400/80 font-semibold">
+                              Setka telewizyjna / cytat #{idx + 1}
+                            </div>
+                            <p className="text-xs text-slate-100 italic leading-relaxed">
+                              „{quote}”
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Rezonans u grup wyborców */}
+              {(() => {
+                const wplyw = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny?.wplyw_na_elektorat;
+                if (!wplyw) return null;
+                return (
+                  <div className="p-4 bg-studio-surface/50 border border-cyan-500/30 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-cyan-300 text-xs">
+                      <Users className="w-4 h-4 text-cyan-400" />
+                      <span>Rezonans u grup wyborców (czy to kupią?)</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div className="p-3 bg-slate-900/60 border border-emerald-500/20 rounded-lg space-y-1">
+                        <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                          Twardy elektorat (zwolennicy)
+                        </span>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          {wplyw.twardy_elektorat || "Brak danych"}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-slate-900/60 border border-cyan-500/20 rounded-lg space-y-1">
+                        <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider block">
+                          Wyborcy niezdecydowani (centrum)
+                        </span>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          {wplyw.niezdecydowani || "Brak danych"}
+                        </p>
+                      </div>
+                      <div className="p-3 bg-slate-900/60 border border-rose-500/20 rounded-lg space-y-1">
+                        <span className="text-[10px] font-bold text-rose-400 uppercase tracking-wider block">
+                          Oponenci polityczni
+                        </span>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          {wplyw.przeciwnicy || "Brak danych"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Rekomendacje sztabowe */}
+              {(() => {
+                const reks = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny?.rekomendacje_sztabowe;
+                if (!reks || reks.length === 0) return null;
+                return (
+                  <div className="p-4 bg-studio-surface/50 border border-indigo-500/30 rounded-xl space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-indigo-300 text-xs">
+                      <Compass className="w-4 h-4 text-indigo-400" />
+                      <span>Rekomendacje sztabowe przed kolejnymi występami</span>
+                    </div>
+                    <ul className="space-y-2">
+                      {reks.map((rek, idx) => (
+                        <li key={idx} className="text-xs text-slate-300 flex items-start gap-2 bg-slate-900/40 p-2.5 rounded-lg border border-indigo-500/20">
+                          <span className="w-5 h-5 rounded-full bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                            {idx + 1}
+                          </span>
+                          <span className="leading-relaxed">{rek}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
+          {/* KARTY PROSTEGO JĘZYKA (Wnioski profilera w prostym języku) */}
           <div className="bg-studio-card/90 border border-studio-border/80 p-6 rounded-2xl shadow-2xl backdrop-blur-xl space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-studio-border/70">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-black tracking-wide text-white uppercase">
+                <h3 className="text-sm font-bold tracking-wide text-white">
                   Wnioski profilera w prostym języku
                 </h3>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-[10px] bg-cyan-950/70 text-cyan-300 border border-cyan-500/40 px-2.5 py-0.5 rounded-full font-mono">
                   Badany: {targetName} ({targetTag})
                 </span>
+                {recording.psychometric_profile?.surowe_wnioski_ai?.temat_rozmowy && (
+                  <span className="text-[10px] bg-slate-800 text-slate-300 border border-slate-700 px-2.5 py-0.5 rounded-full truncate max-w-xs">
+                    Temat: {recording.psychometric_profile.surowe_wnioski_ai.temat_rozmowy}
+                  </span>
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              {/* Karta 1: Emocje i nastroje */}
-              <div className="p-4 bg-studio-surface/50 border border-cyan-500/30 rounded-xl space-y-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-cyan-300">
-                  <Activity className="w-3.5 h-3.5 text-cyan-400" />
-                  Nastroje i emocje
-                </div>
-                <p className="text-slate-300 leading-relaxed text-[11px]">
-                  <strong className="text-white">{targetName}</strong> wkracza w wywiad z wysoką pewnością siebie. Od 4. minuty widoczne pierwsze oznaki zniecierpliwienia i tłumionej złości (zwężanie ust i ściąganie brwi).
-                </p>
-              </div>
-
-              {/* Karta 2: Intencje i uniki */}
-              <div className="p-4 bg-studio-surface/50 border border-amber-500/30 rounded-xl space-y-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-amber-300">
-                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
-                  Główne uniki i taktyka
-                </div>
-                <p className="text-slate-300 leading-relaxed text-[11px]">
-                  Unika bezpośredniej odpowiedzi na pytania o finanse; stosuje tzw. odbicie piłeczki („A co robili nasi poprzednicy?”) oraz ucieka w ogólniki, by nie podać kwot.
-                </p>
-              </div>
-
-              {/* Karta 3: Czułe punkty i lęki */}
-              <div className="p-4 bg-studio-surface/50 border border-red-500/30 rounded-xl space-y-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-red-300">
-                  <HeartCrack className="w-3.5 h-3.5 text-red-400" />
-                  Czułe punkty (stres fizjologiczny)
-                </div>
-                <p className="text-slate-300 leading-relaxed text-[11px]">
-                  Gwałtowny skok mrugania (z 18 do 52 mrugnięć/min) oraz ucieczka wzrokiem w dół, gdy dziennikarz zapytał o personalną odpowiedzialność za ustawę.
-                </p>
-              </div>
-
-              {/* Karta 4: Zgodność ciała ze słowami */}
-              <div className="p-4 bg-studio-surface/50 border border-emerald-500/30 rounded-xl space-y-1.5">
-                <div className="flex items-center gap-1.5 font-bold text-emerald-300">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  Spójność (Słowa vs Ciało)
-                </div>
-                <p className="text-slate-300 leading-relaxed text-[11px]">
-                  <strong className="text-amber-400">Wykryto dysonans:</strong> Mówiąc „nie mam z tym żadnego problemu”, mówca mimowolnie przecząco kręci głową i zaciska wargi.
-                </p>
-              </div>
-
-              {/* Dodatkowe karty dla trybu PEŁNY: Argumentacja, Perswazja, Starcie z adwersarzami */}
-              {recording.zakres_analizy !== "behawioralny" && (
-                <>
-                  {/* Karta 5: Skuteczność argumentacji */}
-                  <div className="p-4 bg-studio-surface/50 border border-cyan-500/30 rounded-xl space-y-1.5">
-                    <div className="flex items-center gap-1.5 font-bold text-cyan-300">
-                      <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
-                      Siła argumentacji (Logika vs Frazesy)
-                    </div>
-                    <p className="text-slate-300 leading-relaxed text-[11px]">
-                      <strong className="text-white">Ocena merytoryczna:</strong> Dobrze operuje liczbami w części gospodarczej, ale przy pytaniu o reformę popada w logiczne zapętlenie (błąd fałszywego dylematu).
-                    </p>
+            {/* Dynamiczne karty profilu lub stan analizowania na żywo */}
+            {recording.psychometric_profile ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                {/* Karta 1: Nastroje i emocje */}
+                <div className="p-4 bg-studio-surface/50 border border-cyan-500/30 rounded-xl space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-cyan-300">
+                    <Activity className="w-3.5 h-3.5 text-cyan-400" />
+                    Nastroje i emocje
                   </div>
+                  <p className="text-slate-300 leading-relaxed text-[11px]">
+                    <strong className="text-white">{targetName}:</strong>{" "}
+                    {recording.psychometric_profile.nastroj_glowny_prosty}
+                  </p>
+                </div>
 
-                  {/* Karta 6: Czy odbiorcy to kupią? */}
-                  <div className="p-4 bg-studio-surface/50 border border-blue-500/30 rounded-xl space-y-1.5">
-                    <div className="flex items-center gap-1.5 font-bold text-blue-300">
-                      <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                      Czy odbiorcy to kupią? (Perswazja)
-                    </div>
-                    <p className="text-slate-300 leading-relaxed text-[11px]">
-                      <strong className="text-white">Rezonans społeczny:</strong> Wysoka skuteczność perswazyjna dla twardego elektoratu (zrozumiały, emocjonalny język). Dla wyborców niezdecydowanych nadmierna agresja osłabia zaufanie.
-                    </p>
+                {/* Karta 2: Główne uniki i taktyka */}
+                <div className="p-4 bg-studio-surface/50 border border-amber-500/30 rounded-xl space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-amber-300">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    Główne uniki i taktyka
                   </div>
+                  <p className="text-slate-300 leading-relaxed text-[11px]">
+                    {recording.psychometric_profile.glowne_uniki_i_taktyka ||
+                      recording.psychometric_profile.styl_komunikacji_prosty}
+                  </p>
+                </div>
 
-                  {/* Karta 7: Pojedynek ze studiem/adwersarzami */}
-                  <div className="p-4 bg-studio-surface/50 border border-purple-500/30 rounded-xl sm:col-span-2 space-y-1.5">
-                    <div className="flex items-center gap-1.5 font-bold text-purple-300">
-                      <Activity className="w-3.5 h-3.5 text-purple-400" />
-                      Pojedynek z adwersarzami / dziennikarzem
-                    </div>
-                    <p className="text-slate-300 leading-relaxed text-[11px]">
-                      <strong className="text-white">Bilans starcia:</strong> Rozmówca nie dał się zepchnąć do defensywy. Skutecznie przejął kontrolę nad tempem rozmowy i narzucił własną agendę, neutralizując próby dopytania ze strony studia.
-                    </p>
+                {/* Karta 3: Czułe punkty (stres fizjologiczny) */}
+                <div className="p-4 bg-studio-surface/50 border border-red-500/30 rounded-xl space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-red-300">
+                    <HeartCrack className="w-3.5 h-3.5 text-red-400" />
+                    Czułe punkty (stres fizjologiczny)
                   </div>
-                </>
-              )}
-            </div>
+                  <p className="text-slate-300 leading-relaxed text-[11px]">
+                    {recording.psychometric_profile.surowe_wnioski_ai?.wnioski?.czule_punkty_stres ||
+                      (typeof recording.psychometric_profile.czule_punkty_i_leki?.[0] === "object"
+                        ? (recording.psychometric_profile.czule_punkty_i_leki[0] as any)?.dlaczego_to_minus || (recording.psychometric_profile.czule_punkty_i_leki[0] as any)?.nazwa_bledu
+                        : recording.psychometric_profile.czule_punkty_i_leki?.[0]) ||
+                      "Brak gwałtownych skoków napięcia lub drżenia głosu w badanym materiale."}
+                  </p>
+                </div>
+
+                {/* Karta 4: Spójność (słowa a ciało i głos) */}
+                <div className="p-4 bg-studio-surface/50 border border-emerald-500/30 rounded-xl space-y-1.5">
+                  <div className="flex items-center gap-1.5 font-bold text-emerald-300">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    Spójność (słowa a ciało i głos)
+                  </div>
+                  <p className="text-slate-300 leading-relaxed text-[11px]">
+                    {recording.psychometric_profile.spojnosc_mowy_ze_slowami ||
+                      "Wypowiedź i intonacja głosu pozostają spójne z treścią deklaracji."}
+                  </p>
+                </div>
+
+                {/* Dodatkowe karty dla trybu PEŁNY: Argumentacja, Perswazja, Starcie z adwersarzami */}
+                {recording.zakres_analizy !== "behawioralny" && (
+                  <>
+                    {/* Karta 5: Siła argumentacji (logika a frazesy) */}
+                    <div className="p-4 bg-studio-surface/50 border border-cyan-500/30 rounded-xl space-y-1.5">
+                      <div className="flex items-center gap-1.5 font-bold text-cyan-300">
+                        <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+                        Siła argumentacji (logika a frazesy)
+                      </div>
+                      <p className="text-slate-300 leading-relaxed text-[11px]">
+                        {recording.psychometric_profile.skutecznosc_argumentacji ||
+                          recording.psychometric_profile.surowe_wnioski_ai?.wnioski?.sila_argumentacji ||
+                          (typeof recording.psychometric_profile.mocne_strony?.[0] === "object"
+                            ? (recording.psychometric_profile.mocne_strony[0] as any)?.dlaczego_to_plus || (recording.psychometric_profile.mocne_strony[0] as any)?.nazwa_atutu
+                            : recording.psychometric_profile.mocne_strony?.[0]) ||
+                          "Brak wystarczającej liczby kontrargumentów do pełnej oceny logiki."}
+                      </p>
+                    </div>
+
+                    {/* Karta 6: Czy odbiorcy to kupią? (perswazja) */}
+                    <div className="p-4 bg-studio-surface/50 border border-blue-500/30 rounded-xl space-y-1.5">
+                      <div className="flex items-center gap-1.5 font-bold text-blue-300">
+                        <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                        Czy odbiorcy to kupią? (perswazja)
+                      </div>
+                      <p className="text-slate-300 leading-relaxed text-[11px]">
+                        {recording.psychometric_profile.perswazyjnosc_odbiorcow ||
+                          recording.psychometric_profile.surowe_wnioski_ai?.wnioski?.czy_odbiorcy_to_kupia ||
+                          "Wiarygodność przekazu zależna od sympatii partyjnych odbiorców."}
+                      </p>
+                    </div>
+
+                    {/* Karta 7: Pojedynek z adwersarzami lub dziennikarzem */}
+                    <div className="p-4 bg-studio-surface/50 border border-purple-500/30 rounded-xl sm:col-span-2 space-y-1.5">
+                      <div className="flex items-center gap-1.5 font-bold text-purple-300">
+                        <Activity className="w-3.5 h-3.5 text-purple-400" />
+                        Pojedynek z adwersarzami lub dziennikarzem
+                      </div>
+                      <p className="text-slate-300 leading-relaxed text-[11px]">
+                        {recording.psychometric_profile.radzenie_z_adwersarzami ||
+                          recording.psychometric_profile.surowe_wnioski_ai?.wnioski?.pojedynek_z_adwersarzami ||
+                          "Relacja ze studiem zbalansowana, bez bezpośrednich starć."}
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="p-8 bg-studio-surface/40 border border-cyan-500/30 rounded-xl flex flex-col items-center justify-center text-center space-y-3">
+                <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
+                <div className="text-xs font-bold text-slate-100">
+                  PROFILER AI analizuje treść i zachowanie w tym nagraniu...
+                </div>
+                <p className="text-[11px] text-slate-400 max-w-md leading-relaxed">
+                  {recording.krok_postepu || "Trwa przetwarzanie ścieżki dźwiękowej i mimiki twarzy."} ({recording.procent_postepu}%)
+                </p>
+                <div className="flex items-center gap-2 pt-2">
+                  <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/70 border border-cyan-500/30 px-2.5 py-1 rounded-full">
+                    Cel profilowania: {targetName} ({targetTag})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="text-[10px] bg-studio-surface hover:bg-slate-800 border border-studio-border text-slate-300 hover:text-white px-2.5 py-1 rounded-full transition-colors flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-2.5 h-2.5" /> Wymuś odświeżenie analizy
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Zwijany panel danych technicznych dla ekspertów */}
@@ -452,7 +1022,7 @@ export default function RecordingDetailPage() {
               className="w-full p-4 flex items-center justify-between text-xs font-semibold text-slate-300 hover:text-cyan-300 hover:bg-studio-surface/60 transition-colors"
             >
               <span className="flex items-center gap-2">
-                🔬 Twarde pomiary biometryczne i laboratoryjne (FACS & Akustyka)
+                🔬 Twarde pomiary profilera i laboratoryjne (FACS i akustyka)
               </span>
               {showTechnicalDrawer ? <ChevronUp className="w-4 h-4 text-cyan-400" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
             </button>
@@ -461,20 +1031,28 @@ export default function RecordingDetailPage() {
               <div className="p-5 border-t border-studio-border/70 bg-studio-surface/40 text-xs font-mono space-y-3 text-slate-300">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-3 bg-studio-card/80 border border-studio-border/60 rounded-xl">
-                    <span className="text-cyan-400 block text-[10px] font-bold tracking-wider mb-1">JEDNOSTKI MIMICZNE (FACS):</span>
-                    <span className="text-slate-200">AU14 (Dimpler), AU4 (Brow lowerer), AU23 (Lip tightener)</span>
+                    <span className="text-cyan-400 block text-[10px] font-bold tracking-wider mb-1">Badana osoba:</span>
+                    <span className="text-slate-200">{targetName} ({targetTag})</span>
                   </div>
                   <div className="p-3 bg-studio-card/80 border border-studio-border/60 rounded-xl">
-                    <span className="text-cyan-400 block text-[10px] font-bold tracking-wider mb-1">CZĘSTOTLIWOŚĆ MRUGANIA:</span>
-                    <span className="text-slate-200">Baza: 20 bpm &rarr; Szczyt: 54 bpm (+170% pod presją)</span>
+                    <span className="text-cyan-400 block text-[10px] font-bold tracking-wider mb-1">Styl komunikacji:</span>
+                    <span className="text-slate-200">{recording.psychometric_profile?.styl_komunikacji_prosty || "W trakcie kalibracji..."}</span>
                   </div>
                   <div className="p-3 bg-studio-card/80 border border-studio-border/60 rounded-xl">
-                    <span className="text-cyan-400 block text-[10px] font-bold tracking-wider mb-1">AKUSTYKA GŁOSU (F0 & JITTER):</span>
-                    <span className="text-slate-200">Średnie F0: 135 Hz, Skok pod presją: 178 Hz (+43 Hz)</span>
+                    <span className="text-cyan-400 block text-[10px] font-bold tracking-wider mb-1">Mocne strony i argumenty:</span>
+                    <span className="text-slate-200">
+                      {typeof recording.psychometric_profile?.mocne_strony?.[0] === "object"
+                        ? (recording.psychometric_profile.mocne_strony[0] as any)?.nazwa_atutu || (recording.psychometric_profile.mocne_strony[0] as any)?.punkt
+                        : recording.psychometric_profile?.mocne_strony?.[0] || recording.psychometric_profile?.skutecznosc_argumentacji || "Analiza w toku"}
+                    </span>
                   </div>
                   <div className="p-3 bg-studio-card/80 border border-studio-border/60 rounded-xl">
-                    <span className="text-cyan-400 block text-[10px] font-bold tracking-wider mb-1">INDEKS KONGRUENCJI (C_SCORE):</span>
-                    <span className="text-slate-200">0.42 / 1.0 (Dysonans w 3 segmentach kluczowych)</span>
+                    <span className="text-cyan-400 block text-[10px] font-bold tracking-wider mb-1">Czułe punkty:</span>
+                    <span className="text-slate-200">
+                      {typeof recording.psychometric_profile?.czule_punkty_i_leki?.[0] === "object"
+                        ? (recording.psychometric_profile.czule_punkty_i_leki[0] as any)?.nazwa_bledu || (recording.psychometric_profile.czule_punkty_i_leki[0] as any)?.blad
+                        : recording.psychometric_profile?.czule_punkty_i_leki?.[0] || "W normie (brak skoków)"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -490,6 +1068,7 @@ export default function RecordingDetailPage() {
             initialStep={recording.krok_postepu}
             initialPercent={recording.procent_postepu}
             onComplete={() => loadData()}
+            onRetry={handleRetry}
           />
 
           {/* Karta statusu potoku */}

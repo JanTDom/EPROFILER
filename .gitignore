@@ -34,3 +34,8 @@ storage/cache/*
 # Systemowe
 .DS_Store
 Thumbs.db
+*.db-shm
+*.db-wal
+*.tsbuildinfo
+.system_generated/
+scratch/
