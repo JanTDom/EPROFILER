@@ -4,27 +4,31 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from app.config import settings
 from app.db.models import Base
 
-# Utwórz silnik asynchroniczny ze zwiększonym limitem czasu oczekiwania na blokadę (60s)
+is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+connect_args = {"timeout": 60} if is_sqlite else {}
+
+# Utwórz silnik asynchroniczny
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=(settings.ENV == "development"),
     future=True,
-    connect_args={"timeout": 60}
+    connect_args=connect_args
 )
 
-@event.listens_for(engine.sync_engine, "connect")
-def set_sqlite_pragma(dbapi_connection, connection_record):
-    """Konfiguruje SQLite: busy_timeout i synchronous dla odporności na współbieżność."""
-    cursor = dbapi_connection.cursor()
-    try:
-        cursor.execute("PRAGMA busy_timeout=60000")
-        cursor.execute("PRAGMA synchronous=NORMAL")
+if is_sqlite:
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        """Konfiguruje SQLite: busy_timeout i synchronous dla odporności na współbieżność."""
+        cursor = dbapi_connection.cursor()
         try:
-            cursor.execute("PRAGMA journal_mode=WAL")
-        except Exception:
-            pass
-    finally:
-        cursor.close()
+            cursor.execute("PRAGMA busy_timeout=60000")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            try:
+                cursor.execute("PRAGMA journal_mode=WAL")
+            except Exception:
+                pass
+        finally:
+            cursor.close()
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
