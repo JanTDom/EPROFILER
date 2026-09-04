@@ -20,6 +20,7 @@ export const IngestForm: React.FC = () => {
   const [recordingType, setRecordingType] = useState<RecordingType>("wywiad");
   const [publicationDate, setPublicationDate] = useState("");
   const [enableBiometrics, setEnableBiometrics] = useState(true);
+  const [analysisScope, setAnalysisScope] = useState<"pelny" | "behawioralny">("pelny");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +38,7 @@ export const IngestForm: React.FC = () => {
           typ_nagrania: recordingType,
           data_publikacji: publicationDate || undefined,
           tryb_biometryczny: enableBiometrics,
+          zakres_analizy: analysisScope,
         });
         router.push(`/recordings/${created.id}`);
       } else {
@@ -49,6 +51,7 @@ export const IngestForm: React.FC = () => {
         formData.append("typ_nagrania", recordingType);
         if (publicationDate) formData.append("data_publikacji", publicationDate);
         formData.append("tryb_biometryczny", enableBiometrics ? "true" : "false");
+        formData.append("zakres_analizy", analysisScope);
 
         const created = await uploadRecordingFile(formData);
         router.push(`/recordings/${created.id}`);
@@ -60,55 +63,63 @@ export const IngestForm: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto bg-white border border-border p-6 shadow-sm">
+    <div className="relative max-w-2xl mx-auto bg-studio-card/85 border border-studio-border/80 p-7 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden before:absolute before:top-0 before:left-0 before:w-full before:h-1 before:bg-gradient-to-r before:from-cyan-500 before:via-blue-500 before:to-emerald-400">
+      {/* Narożniki HUD */}
+      <div className="absolute top-3 left-3 w-2 h-2 border-t-2 border-l-2 border-cyan-400/60 pointer-events-none" />
+      <div className="absolute top-3 right-3 w-2 h-2 border-t-2 border-r-2 border-cyan-400/60 pointer-events-none" />
+      <div className="absolute bottom-3 left-3 w-2 h-2 border-b-2 border-l-2 border-cyan-400/60 pointer-events-none" />
+      <div className="absolute bottom-3 right-3 w-2 h-2 border-b-2 border-r-2 border-cyan-400/60 pointer-events-none" />
+
       <div className="mb-6">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-mono text-xs font-bold uppercase tracking-wider text-slate-900 bg-slate-100 px-2 py-0.5 border border-slate-200">
-            PROFILER STUDIO
+        <div className="flex items-center gap-2 mb-2">
+          <span className="font-mono text-[10px] font-bold uppercase tracking-widest text-cyan-300 bg-cyan-950/60 px-2.5 py-1 border border-cyan-500/40 rounded-full flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            PROFILER FORENSICS LAB
           </span>
-          <span className="text-xs text-blue-600 flex items-center gap-1 font-medium">
-            <Sparkles className="w-3 h-3" />
-            Wersja z prostym językiem
+          <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium bg-emerald-950/40 px-2.5 py-0.5 border border-emerald-500/30 rounded-full">
+            <Sparkles className="w-3 h-3 text-emerald-400" />
+            Język zrozumiały dla każdego
           </span>
         </div>
-        <h2 className="text-xl font-bold tracking-tight text-slate-950">
+        <h2 className="text-2xl font-black tracking-tight text-white">
           Wprowadź materiał do profilowania
         </h2>
-        <p className="text-xs text-slate-500 mt-1">
-          Przeanalizuj wystąpienie polityka pod kątem emocji, intencji, mocnych i słabych stron, czułych punktów oraz zbieżności mowy ciała ze słowami.
+        <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
+          Wprowadź link lub plik wideo, aby przeprowadzić multimodalną analizę emocji, intencji, mocnych i słabych stron, czułych punktów oraz zbieżności mowy ciała ze słowami.
         </p>
       </div>
 
       {/* Wybór metody wprowadzania */}
-      <div className="flex border-b border-border mb-6">
+      <div className="flex border-b border-studio-border/80 mb-6 bg-studio-surface/50 p-1 rounded-lg">
         <button
           type="button"
           onClick={() => setTab("url")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold rounded-md transition-all ${
             tab === "url"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "bg-cyan-500/15 border border-cyan-500/50 text-cyan-300 shadow-sm"
+              : "text-slate-400 hover:text-slate-200 border border-transparent"
           }`}
         >
-          <Link2 className="w-3.5 h-3.5" />
-          Link URL (YouTube i inne)
+          <Link2 className="w-3.5 h-3.5 text-cyan-400" />
+          Link URL (YouTube / wideo)
         </button>
         <button
           type="button"
           onClick={() => setTab("file")}
-          className={`flex items-center gap-2 px-4 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-xs font-semibold rounded-md transition-all ${
             tab === "file"
-              ? "border-slate-900 text-slate-900"
-              : "border-transparent text-slate-500 hover:text-slate-800"
+              ? "bg-cyan-500/15 border border-cyan-500/50 text-cyan-300 shadow-sm"
+              : "text-slate-400 hover:text-slate-200 border border-transparent"
           }`}
         >
-          <Upload className="w-3.5 h-3.5" />
+          <Upload className="w-3.5 h-3.5 text-cyan-400" />
           Plik z dysku (mp4, mov, webm)
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-xs">
+        <div className="mb-4 p-3 bg-red-950/40 border border-red-500/50 text-red-300 text-xs rounded-lg flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-red-400 flex-shrink-0 animate-ping" />
           {error}
         </div>
       )}
@@ -116,8 +127,9 @@ export const IngestForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-4">
         {tab === "url" ? (
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
-              Adres URL nagrania *
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+              <span>Adres URL nagrania *</span>
+              <span className="text-[10px] text-slate-500 font-mono">np. YouTube, wywiad, debata</span>
             </label>
             <input
               type="url"
@@ -125,12 +137,12 @@ export const IngestForm: React.FC = () => {
               placeholder="https://www.youtube.com/watch?v=..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-border focus:outline-none focus:border-slate-900 font-mono"
+              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 font-mono transition-all"
             />
           </div>
         ) : (
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
               Wybierz plik wideo *
             </label>
             <input
@@ -138,42 +150,42 @@ export const IngestForm: React.FC = () => {
               required
               accept="video/mp4,video/quicktime,video/webm,video/x-matroska"
               onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              className="w-full px-3 py-2 text-xs border border-border focus:outline-none focus:border-slate-900"
+              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-300 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer focus:outline-none focus:border-cyan-400 transition-all"
             />
           </div>
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
               Format wystąpienia
             </label>
             <select
               value={recordingType}
               onChange={(e) => setRecordingType(e.target.value as RecordingType)}
-              className="w-full px-3 py-2 text-xs border border-border focus:outline-none focus:border-slate-900 bg-white"
+              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-200 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 transition-all"
             >
-              <option value="wywiad">Wywiad (1 na 1)</option>
-              <option value="debata">Debata / Panel dyskusyjny</option>
-              <option value="przemowienie">Przemówienie / Oświadczenie</option>
+              <option value="wywiad" className="bg-slate-900 text-slate-100">Wywiad (1 na 1)</option>
+              <option value="debata" className="bg-slate-900 text-slate-100">Debata / Panel dyskusyjny</option>
+              <option value="przemowienie" className="bg-slate-900 text-slate-100">Przemówienie / Oświadczenie</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700 mb-1">
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
               Data publikacji / emisji
             </label>
             <input
               type="date"
               value={publicationDate}
               onChange={(e) => setPublicationDate(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-border focus:outline-none focus:border-slate-900"
+              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-200 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 transition-all"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-700 mb-1">
+          <label className="block text-xs font-semibold text-slate-300 mb-1.5">
             Tytuł opcjonalny (jeśli puste, pobrany automatycznie)
           </label>
           <input
@@ -181,26 +193,91 @@ export const IngestForm: React.FC = () => {
             placeholder="np. Debata prezydencka — Starcie kandydatów"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 text-xs border border-border focus:outline-none focus:border-slate-900"
+            className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 transition-all"
           />
         </div>
 
+        {/* Wybór zakresu profilowania: Oceń wszystko vs Tylko stan psychiczny */}
+        <div className="space-y-2 pt-2">
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+              Zakres oceny PROFILERA *
+            </label>
+            <span className="text-[10px] text-cyan-400 font-mono">Wybierz tryb analizy</span>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Opcja 1: Oceń wszystko */}
+            <div
+              onClick={() => setAnalysisScope("pelny")}
+              className={`p-4 border cursor-pointer transition-all rounded-xl relative overflow-hidden ${
+                analysisScope === "pelny"
+                  ? "border-cyan-500/80 bg-cyan-950/30 ring-1 ring-cyan-500/50 shadow-glow-cyan"
+                  : "border-studio-border/70 bg-studio-surface/40 hover:border-slate-700 text-slate-400"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <input
+                  type="radio"
+                  name="scope"
+                  checked={analysisScope === "pelny"}
+                  onChange={() => setAnalysisScope("pelny")}
+                  className="text-cyan-400 focus:ring-cyan-400"
+                />
+                <span className={`text-xs font-bold ${analysisScope === "pelny" ? "text-cyan-300" : "text-slate-300"}`}>
+                  Oceń wszystko (Zalecane)
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 pl-5 leading-relaxed">
+                Bada <strong className="text-slate-200">zachowanie, emocje i lęki</strong> oraz <strong className="text-slate-200">skuteczność argumentacji</strong>, czy odbiorcy „kupią” przekaz i jak mówca radzi sobie w starciu z adwersarzami.
+              </p>
+            </div>
+
+            {/* Opcja 2: Tylko zachowanie i stan psychiczny */}
+            <div
+              onClick={() => setAnalysisScope("behawioralny")}
+              className={`p-4 border cursor-pointer transition-all rounded-xl relative overflow-hidden ${
+                analysisScope === "behawioralny"
+                  ? "border-emerald-500/80 bg-emerald-950/30 ring-1 ring-emerald-500/50 shadow-glow-emerald"
+                  : "border-studio-border/70 bg-studio-surface/40 hover:border-slate-700 text-slate-400"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <input
+                  type="radio"
+                  name="scope"
+                  checked={analysisScope === "behawioralny"}
+                  onChange={() => setAnalysisScope("behawioralny")}
+                  className="text-emerald-400 focus:ring-emerald-400"
+                />
+                <span className={`text-xs font-bold ${analysisScope === "behawioralny" ? "text-emerald-300" : "text-slate-300"}`}>
+                  Tylko zachowanie i psychika
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 pl-5 leading-relaxed">
+                Czyste profilowanie psychologiczne i biometryczne: <strong className="text-slate-200">emocje, lęki, mimika, drżenie głosu i mowa ciała</strong> — bez oceniania polityki i argumentów.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Przełącznik modułu biometryczno-psychometrycznego */}
-        <div className="p-3 bg-blue-50/70 border border-blue-200">
+        <div className="p-3.5 bg-gradient-to-r from-cyan-950/30 via-studio-surface/60 to-studio-surface/40 border border-cyan-500/30 rounded-xl">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
               checked={enableBiometrics}
               onChange={(e) => setEnableBiometrics(e.target.checked)}
-              className="mt-0.5 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+              className="mt-1 rounded border-cyan-500/50 text-cyan-500 focus:ring-cyan-400 bg-studio-surface"
             />
             <div>
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-900">
-                <Eye className="w-3.5 h-3.5 text-blue-600" />
-                <span>Włącz zaawansowany moduł biometrii i mowy ciała PROFILER</span>
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-100">
+                <Eye className="w-4 h-4 text-cyan-400" />
+                <span>Włącz zaawansowaną biometrię wideo (mimika FACS, wzrok, drżenie głosu)</span>
               </div>
-              <p className="text-[11px] text-slate-600 mt-0.5 leading-normal">
-                Bada tempo mrugania, ucieczkę wzroku, mikroekspresje twarzy (FACS) i drżenie głosu, a następnie tłumaczy odczyty na prosty, intuicyjny język polski.
+              <p className="text-[11px] text-slate-400 mt-1 leading-normal">
+                Uruchamia klatkową analizę mikroruchów twarzy, częstotliwości mrugania i wariancji częstotliwości tonu podstawowego F0.
               </p>
             </div>
           </label>
@@ -209,23 +286,23 @@ export const IngestForm: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors disabled:opacity-50 mt-4"
+          className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-cyan-500 via-blue-600 to-cyan-500 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-glow-cyan disabled:opacity-50 mt-5 active:scale-[0.99]"
         >
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Uruchamianie PROFILERA...
+              <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+              Inicjalizacja PROFILERA...
             </>
           ) : (
             <>
               Rozpocznij profilowanie
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
             </>
           )}
         </button>
       </form>
 
-      <div className="mt-6 pt-4 border-t border-border">
+      <div className="mt-6 pt-5 border-t border-studio-border/70">
         <LegalNotice />
       </div>
     </div>

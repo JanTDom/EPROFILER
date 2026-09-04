@@ -59,6 +59,7 @@ class Recording(Base):
     sciezka_audio = Column(Text, nullable=True)
     blad = Column(Text, nullable=True)
     tryb_biometryczny = Column(Boolean, default=True) # flaga włączenia modułu biometrii
+    zakres_analizy = Column(String(50), default="pelny") # "pelny" (wszystko) | "behawioralny" (tylko zachowanie i stan psychiczny)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -265,6 +266,11 @@ class PsychometricProfile(Base):
     styl_komunikacji_prosty = Column(Text, nullable=False)
     czule_punkty_i_leki = Column(JSON, default=list) # lista tematów wyzwalających stres
     mocne_strony = Column(JSON, default=list) # w czym mówca był opanowany i skuteczny
+
+    # Nowe pola dla trybu "Oceń wszystko" (argumentacja, perswazja, adwersarze):
+    skutecznosc_argumentacji = Column(Text, nullable=True) # prosta ocena logiki vs frazesów
+    perswazyjnosc_odbiorcow = Column(Text, nullable=True) # czy wyborcy/widzowie to kupią i dlaczego
+    radzenie_z_adwersarzami = Column(Text, nullable=True) # bilans pojedynku (dominacja vs defensywa)
 
     recording = relationship("Recording", back_populates="psychometric_profile")
 

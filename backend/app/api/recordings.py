@@ -25,6 +25,7 @@ class RecordingResponse(BaseModel):
     procent_postepu: int
     blad: Optional[str] = None
     tryb_biometryczny: bool = True
+    zakres_analizy: str = "pelny" # "pelny" (wszystko) | "behawioralny" (tylko zachowanie i stan psychiczny)
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -35,6 +36,7 @@ class CreateFromUrlRequest(BaseModel):
     typ_nagrania: str = "wywiad" # "wywiad", "debata", "przemowienie"
     data_publikacji: Optional[datetime] = None
     tryb_biometryczny: bool = True
+    zakres_analizy: str = "pelny" # "pelny" | "behawioralny"
 
 @router.get("", response_model=List[RecordingResponse])
 async def list_recordings(db: AsyncSession = Depends(get_db)):
@@ -62,6 +64,7 @@ async def create_recording_from_url(payload: CreateFromUrlRequest, db: AsyncSess
         data_publikacji=payload.data_publikacji,
         typ_nagrania=payload.typ_nagrania,
         tryb_biometryczny=payload.tryb_biometryczny,
+        zakres_analizy=payload.zakres_analizy,
         status_przetwarzania="POBIERANIE",
         krok_postepu="Zadanie zakolejkowane do pobrania..."
     )
@@ -80,6 +83,7 @@ async def upload_recording_file(
     typ_nagrania: str = Form("wywiad"),
     data_publikacji: Optional[str] = Form(None),
     tryb_biometryczny: bool = Form(True),
+    zakres_analizy: str = Form("pelny"),
     db: AsyncSession = Depends(get_db)
 ):
     title = tytul.strip() if tytul else file.filename
@@ -96,6 +100,7 @@ async def upload_recording_file(
         data_publikacji=pub_date,
         typ_nagrania=typ_nagrania,
         tryb_biometryczny=tryb_biometryczny,
+        zakres_analizy=zakres_analizy,
         status_przetwarzania="PRZETWARZANIE",
         krok_postepu="Zapisano plik. Uruchamianie przetwarzania..."
     )

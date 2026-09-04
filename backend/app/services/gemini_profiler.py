@@ -130,28 +130,52 @@ Zwróć JSON:
         imie_nazwisko: str,
         uniki_i_techniki: List[Dict[str, Any]],
         biometria_stres: List[Dict[str, Any]],
-        statystyki_czasu: Dict[str, Any]
+        statystyki_czasu: Dict[str, Any],
+        zakres_analizy: str = "pelny"
     ) -> Dict[str, Any]:
         """
-        Synteza całościowego profilu w prostym języku (Prompt 6.5 + Plain Language).
+        Synteza całościowego profilu w prostym języku.
+        W trybie "pelny" ocenia: zachowanie + stan psychiczny + siłę argumentacji + perswazję (czy ludzie to kupią) + starcie z adwersarzami.
+        W trybie "behawioralny" skupia się wyłącznie na emocjach, lękach, mowie ciała i napięciu.
         """
-        prompt = f"""Dostajesz komplet wykrytych markerów zachowania, reakcji stresowych i mowy dla osoby: {imie_nazwisko}.
-Zbuduj całościowy profil w prostym języku polskim, zrozumiałym dla każdego odbiorcy.
+        if zakres_analizy == "behawioralny":
+            prompt = f"""Dostajesz wykryte reakcje mowy ciała, drżenie głosu, mimikę i emocje dla osoby: {imie_nazwisko}.
+ZAKRES OCENY: Wyłącznie stan psychiczny, emocje, lęki i zachowanie niewerbalne.
 
 DANE:
-- Zdarzenia i uniki: {json.dumps(uniki_i_techniki, ensure_ascii=False)}
-- Reakcje stresowe i biometria: {json.dumps(biometria_stres, ensure_ascii=False)}
-- Bilans wypowiedzi: {json.dumps(statystyki_czasu, ensure_ascii=False)}
+- Zdarzenia biometryczne i mimiczne: {json.dumps(biometria_stres, ensure_ascii=False)}
+- Zaobserwowane reakcje: {json.dumps(uniki_i_techniki, ensure_ascii=False)}
 
 Zwróć JSON:
 {{
   "ogolny_nastroj_i_emocje": "2 zdania opisujące nastrój mówcy",
-  "ukryte_intencje_i_taktyka": "2 zdania opisujące do czego dążył rozmówca",
+  "czule_punkty_i_leki": ["jakie pytania lub tematy wywołały nagły stres/drżenie/mruganie"],
+  "zgodnosc_ciala_ze_slowami": "czy ciało potwierdzało wypowiedzi czy zdradzało dysonans",
+  "poziom_opanowania_stresu": "Wysoki / Umiarkowany / Niski",
+  "zastrzezenia": "gdzie zabrakło danych / co obniża pewność wniosków"
+}}"""
+        else:
+            prompt = f"""Dostajesz komplet wykrytych markerów zachowania, reakcji stresowych, argumentacji i mowy dla osoby: {imie_nazwisko}.
+ZAKRES OCENY: PEŁNY PROFIL — oceniasz ZARÓWNO zachowanie i stan psychiczny, JAK I to czy dobrze argumentuje, czy jest przekonujący, czy odbiorcy/wyborcy kupią jego przekaz oraz jak radzi sobie z adwersarzami/dziennikarzem.
+
+DANE:
+- Zdarzenia, uniki i techniki: {json.dumps(uniki_i_techniki, ensure_ascii=False)}
+- Reakcje stresowe i biometria: {json.dumps(biometria_stres, ensure_ascii=False)}
+- Bilans wypowiedzi i tempo: {json.dumps(statystyki_czasu, ensure_ascii=False)}
+
+Zwróć JSON:
+{{
+  "ogolny_nastroj_i_emocje": "2 zdania o stanie psychicznym i emocjonalnym mówcy",
+  "ukryte_intencje_i_taktyka": "2 zdania o prawdziwym celu rozmówcy",
+  "skutecznosc_argumentacji": "ocena czy argumenty są merytoryczne i logiczne, czy to tylko puste frazesy i uniki",
+  "perswazyjnosc_odbiorcow": "czy zwykły widz / wyborca kupi ten przekaz i do kogo on trafia",
+  "radzenie_z_adwersarzami": "jak mówca poradził sobie ze starciem (czy zdominował studio, czy dał się zapędzić w kozi róg)",
   "glowne_mocne_strony": ["w czym mówca był opanowany i skuteczny"],
-  "slabe_strony_i_czule_punkty": ["jakie tematy wywołały stres lub uniki"],
+  "slabe_strony_i_czule_punkty": ["jakie tematy wywołały stres, błędy lub uniki"],
   "zgodnosc_ciala_ze_slowami": "czy mowa ciała potwierdzała słowa czy zdradzała dysonans",
   "zastrzezenia": "gdzie zabrakło danych / co obniża pewność wniosków"
 }}"""
+
         return await self._call_gemini_json(prompt)
 
 gemini_profiler = GeminiProfilerService()

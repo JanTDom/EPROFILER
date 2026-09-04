@@ -8,28 +8,34 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "#ffffff",
-        foreground: "#0f172a", // slate-900
-        muted: {
-          DEFAULT: "#f1f5f9", // slate-100
-          foreground: "#64748b", // slate-500
-        },
-        border: "#e2e8f0", // slate-200
-        primary: {
-          DEFAULT: "#0f172a", // surowy, elegancki granat/czerń
-          foreground: "#ffffff",
-        },
-        accent: {
-          DEFAULT: "#2563eb", // techniczny błękit analityczny
-          foreground: "#ffffff",
-        },
-        warning: "#d97706", // amber-600 (dla uników i odchyleń)
-        danger: "#dc2626", // red-600 (dla niespójności)
-        success: "#16a34a", // green-600 (odpowiedź wprost)
+        background: "#080a0f", // głęboki obsidian
+        surface: "#0e131f", // ciemna stal
+        surfaceHover: "#161e31",
+        surfaceBorder: "#1e293b",
+        cyanGlow: "#00f0ff",
+        emeraldGlow: "#10b981",
+        amberGlow: "#f59e0b",
+        crimsonGlow: "#ef4444",
       },
       fontFamily: {
         sans: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
         mono: ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
+      },
+      boxShadow: {
+        glowCyan: "0 0 25px -5px rgba(0, 240, 255, 0.25)",
+        glowAmber: "0 0 25px -5px rgba(245, 158, 11, 0.25)",
+        glowEmerald: "0 0 25px -5px rgba(16, 185, 129, 0.25)",
+        glowCrimson: "0 0 25px -5px rgba(239, 68, 68, 0.25)",
+      },
+      animation: {
+        pulseSlow: "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        scanline: "scanline 8s linear infinite",
+      },
+      keyframes: {
+        scanline: {
+          "0%": { transform: "translateY(-100%)" },
+          "100%": { transform: "translateY(1000%)" },
+        },
       },
     },
   },

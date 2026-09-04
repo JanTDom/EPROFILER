@@ -24,6 +24,7 @@ export async function createRecordingFromUrl(data: {
   typ_nagrania: RecordingType;
   data_publikacji?: string;
   tryb_biometryczny?: boolean;
+  zakres_analizy?: "pelny" | "behawioralny";
 }): Promise<Recording> {
   const res = await fetch(`${API_BASE}/api/recordings/url`, {
     method: "POST",
@@ -31,6 +32,7 @@ export async function createRecordingFromUrl(data: {
     body: JSON.stringify({
       ...data,
       tryb_biometryczny: data.tryb_biometryczny ?? true,
+      zakres_analizy: data.zakres_analizy ?? "pelny",
     }),
   });
   if (!res.ok) {

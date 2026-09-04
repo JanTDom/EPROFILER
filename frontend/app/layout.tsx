@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { LegalNotice } from "@/components/LegalNotice";
-import { Eye, Shield } from "lucide-react";
+import { Eye, Shield, Radio, Sparkles } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "PROFILER — Multimodalna Analiza Wypowiedzi i Mowy Ciała",
-  description: "Zaawansowany system badania dyskursu, mikroekspresji, intencji i emocji osób publicznych opisany w prostym języku.",
+  title: "PROFILER — Forensic Video & Speech Intelligence System",
+  description: "Zaawansowana analiza wideo, intencji, mikroekspresji FACS, mowy ciała i perswazji osób publicznych w prostym języku.",
 };
 
 export default function RootLayout({
@@ -15,59 +15,78 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pl">
-      <body className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
-        {/* Pasek nawigacji */}
-        <header className="bg-white border-b border-border sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+    <html lang="pl" className="dark">
+      <body className="min-h-screen bg-[#080a0f] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
+        {/* Pasek nawigacji HUD */}
+        <header className="bg-[#0b0f19]/90 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-8">
-              <Link href="/" className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-slate-950 text-white flex items-center justify-center font-mono font-black text-sm rounded">
-                  P
+              <Link href="/" className="flex items-center gap-3 group">
+                <div className="relative w-9 h-9 bg-gradient-to-br from-cyan-500 to-blue-600 rounded flex items-center justify-center font-mono font-black text-white shadow-[0_0_15px_rgba(0,240,255,0.4)] group-hover:scale-105 transition-transform">
+                  <span className="text-base tracking-tighter">P</span>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 bg-emerald-400 rounded-full ring-2 ring-[#080a0f] animate-pulse" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-mono text-sm font-black tracking-wider text-slate-950 leading-none">
-                    PROFILER
-                  </span>
-                  <span className="text-[9px] text-slate-500 font-mono tracking-tight">
-                    INTELLIGENCE STUDIO
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono text-base font-black tracking-widest text-white leading-none">
+                      PROFILER
+                    </span>
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 rounded">
+                      AI 3.6
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-mono tracking-wider mt-0.5">
+                    MULTIMODAL FORENSIC INTELLIGENCE
                   </span>
                 </div>
               </Link>
 
-              <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-600">
-                <Link href="/" className="hover:text-slate-900 transition-colors">
-                  Baza nagrań
+              <nav className="hidden md:flex items-center gap-6 text-xs font-mono font-medium text-slate-400">
+                <Link
+                  href="/"
+                  className="hover:text-cyan-400 transition-colors flex items-center gap-1.5"
+                >
+                  <span className="text-slate-600">//</span> REPOZYTORIUM
                 </Link>
-                <Link href="/recordings/new" className="hover:text-slate-900 transition-colors">
-                  Nowe profilowanie
+                <Link
+                  href="/recordings/new"
+                  className="hover:text-cyan-400 transition-colors flex items-center gap-1.5"
+                >
+                  <span className="text-slate-600">//</span> NOWA ANALIZA
                 </Link>
               </nav>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-4">
+              {/* Telemetria statusu */}
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-slate-900/80 border border-slate-800 rounded text-[11px] font-mono text-slate-300">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                <span>SILNIK ONLINE</span>
+              </div>
+
               <Link
                 href="/recordings/new"
-                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors flex items-center gap-1.5 rounded-sm"
+                className="relative group px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all rounded shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center gap-2"
               >
-                <Eye className="w-3.5 h-3.5 text-blue-400" />
-                + Profiluj wideo
+                <Eye className="w-3.5 h-3.5" />
+                <span>+ Profiluj wideo</span>
               </Link>
             </div>
           </div>
         </header>
 
-        {/* Zawartość strony */}
+        {/* Główna przestrzeń robocza */}
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {children}
         </main>
 
         {/* Stopka */}
-        <footer className="bg-white border-t border-border py-4 mt-12">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <footer className="bg-[#0b0f19] border-t border-slate-800/80 py-6 mt-12">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
             <LegalNotice compact />
-            <div className="mt-2 text-center text-[11px] text-slate-400 font-mono">
-              PROFILER © 2026 — Multimodal Behavioral Intelligence & Speech Analysis.
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500 font-mono pt-2 border-t border-slate-900">
+              <span>PROFILER LABS © 2026 // SYSTEM PROFILOWANIA BEHAWIORALNEGO I DYSKURSU</span>
+              <span className="text-cyan-500/80">GEMINI 3.6 FLASH • EKMAN FACS • PRAAT DSP • WHISPERX</span>
             </div>
           </div>
         </footer>

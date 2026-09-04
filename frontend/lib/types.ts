@@ -27,6 +27,7 @@ export interface Recording {
   procent_postepu: number;
   blad?: string;
   tryb_biometryczny?: boolean;
+  zakres_analizy?: "pelny" | "behawioralny";
   created_at: string;
 }
 
@@ -105,4 +106,7 @@ export interface PsychometricProfile {
   styl_komunikacji_prosty: string;
   czule_punkty_i_leki: string[];
   mocne_strony: string[];
+  skutecznosc_argumentacji?: string;
+  perswazyjnosc_odbiorcow?: string;
+  radzenie_z_adwersarzami?: string;
 }

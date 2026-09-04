@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  ShieldCheck,
 } from "lucide-react";
 
 export default function RecordingDetailPage() {
@@ -104,10 +105,19 @@ export default function RecordingDetailPage() {
               <span className="text-[10px] uppercase font-mono px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200">
                 {recording.typ_nagrania}
               </span>
+              {recording.zakres_analizy === "behawioralny" ? (
+                <span className="text-[10px] font-mono text-purple-700 bg-purple-50 px-2 py-0.5 border border-purple-200">
+                  Zakres: Tylko stan psychiczny i zachowanie
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 border border-emerald-200">
+                  Zakres: Pełny (Zachowanie + Perswazja + Starcie)
+                </span>
+              )}
               {recording.tryb_biometryczny !== false && (
                 <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 border border-blue-200 flex items-center gap-1">
-                  <Eye className="w-3 h-3" />
-                  Biometria & Mimika aktywna
+                  <Eye className="w-3.5 h-3.5" />
+                  Biometria & Mimika
                 </span>
               )}
             </div>
@@ -228,6 +238,44 @@ export default function RecordingDetailPage() {
                   <strong className="text-amber-700">Wykryto dysonans:</strong> Mówiąc „nie mam z tym żadnego problemu”, rozmówca mimowolnie przecząco kręci głową i zaciska wargi.
                 </p>
               </div>
+
+              {/* Dodatkowe karty dla trybu PEŁNY: Argumentacja, Perswazja, Starcie z adwersarzami */}
+              {recording.zakres_analizy !== "behawioralny" && (
+                <>
+                  {/* Karta 5: Skuteczność argumentacji */}
+                  <div className="p-3.5 bg-emerald-50/60 border border-emerald-200 rounded-sm">
+                    <div className="flex items-center gap-1.5 font-semibold text-emerald-900 mb-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      Siła argumentacji (Logika vs Frazesy)
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">
+                      <strong>Ocena merytoryczna:</strong> Dobrze operuje liczbami w części gospodarczej, ale przy pytaniu o reformę popada w logiczne zapętlenie (błąd fałszywego dylematu).
+                    </p>
+                  </div>
+
+                  {/* Karta 6: Czy odbiorcy to kupią? */}
+                  <div className="p-3.5 bg-blue-50/60 border border-blue-200 rounded-sm">
+                    <div className="flex items-center gap-1.5 font-semibold text-blue-900 mb-1">
+                      <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                      Czy odbiorcy to kupią? (Perswazja)
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">
+                      <strong>Rezonans społeczny:</strong> Wysoka skuteczność perswazyjna dla twardego elektoratu (zrozumiały, prosty język). Dla widzów niezdecydowanych nadmierna agresja osłabia wiarygodność.
+                    </p>
+                  </div>
+
+                  {/* Karta 7: Pojedynek ze studiem/adwersarzami */}
+                  <div className="p-3.5 bg-purple-50/60 border border-purple-200 rounded-sm sm:col-span-2">
+                    <div className="flex items-center gap-1.5 font-semibold text-purple-900 mb-1">
+                      <Activity className="w-3.5 h-3.5 text-purple-600" />
+                      Pojedynek z adwersarzami / dziennikarzem
+                    </div>
+                    <p className="text-slate-700 leading-relaxed">
+                      <strong>Bilans starcia:</strong> Rozmówca nie dał się zepchnąć do defensywy. Skutecznie przejął kontrolę nad tempem rozmowy i narzucił własne tematy, neutralizując 4 próby dopytania dziennikarza.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
