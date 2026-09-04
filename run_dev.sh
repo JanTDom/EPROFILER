@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
+# Przejdź do katalogu projektu niezależnie od miejsca wywołania skryptu
+cd "$(dirname "$0")"
+
 echo "=========================================================="
 echo "          DYSKURS — Uruchamianie środowiska lokalnego     "
 echo "=========================================================="
