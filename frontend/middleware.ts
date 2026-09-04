@@ -9,6 +9,7 @@ export function middleware(request: NextRequest) {
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/auth') ||
     pathname === '/login' ||
+    pathname.endsWith('.zip') ||
     pathname === '/favicon.ico' ||
     pathname === '/favicon.png' ||
     pathname === '/logo.png' ||
