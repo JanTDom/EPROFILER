@@ -271,6 +271,35 @@ export async function uploadRecordingFile(formData: FormData): Promise<Recording
   throw new Error("Nie udało się przesłać pliku nagrania.");
 }
 
+export async function deleteRecording(id: string): Promise<boolean> {
+  // 1. Try Supabase direct delete
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/recordings?id=eq.${id}`, {
+        method: "DELETE",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+      });
+      if (res.ok) return true;
+    } catch (e) {
+      console.warn("Supabase direct delete failed:", e);
+    }
+  }
+
+  // 2. Try API_BASE
+  try {
+    const res = await fetch(`${API_BASE}/api/recordings/${id}`, {
+      method: "DELETE",
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn("API_BASE delete failed:", e);
+    return false;
+  }
+}
+
 export async function retryRecording(recordingId: string): Promise<Recording> {
   const res = await fetch(`${API_BASE}/api/recordings/${recordingId}/retry`, {
     method: "POST",

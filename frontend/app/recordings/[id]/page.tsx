@@ -8,6 +8,7 @@ import { Recording, DetectedSpeaker } from "@/lib/types";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { LegalNotice } from "@/components/LegalNotice";
+import { DeleteRecordingButton } from "@/components/DeleteRecordingButton";
 import {
   ArrowLeft,
   Clock,
@@ -171,6 +172,12 @@ export default function RecordingDetailPage() {
             <RefreshCw className="w-3 h-3" />
             Odśwież telemetrię
           </button>
+
+          <DeleteRecordingButton
+            recordingId={recording.id}
+            recordingTitle={recording.tytul}
+            redirectOnDelete={true}
+          />
         </div>
       </div>
 

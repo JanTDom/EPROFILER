@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { fetchRecordings } from "@/lib/api";
 import { Recording } from "@/lib/types";
 import { QuickIngestBar } from "@/components/QuickIngestBar";
+import { DeleteRecordingButton } from "@/components/DeleteRecordingButton";
 import {
   Video,
   Clock,
@@ -280,13 +281,16 @@ export default async function DashboardPage() {
                     </td>
 
                     <td className="px-5 py-4 text-right">
-                      <Link
-                        href={`/recordings/${rec.id}`}
-                        className="inline-flex items-center gap-1 text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 group-hover:translate-x-1 transition-transform"
-                      >
-                        <span>Raport</span>
-                        <span>&rarr;</span>
-                      </Link>
+                      <div className="inline-flex items-center gap-2.5 justify-end">
+                        <Link
+                          href={`/recordings/${rec.id}`}
+                          className="inline-flex items-center gap-1 text-xs font-mono font-bold text-cyan-400 hover:text-cyan-300 group-hover:translate-x-0.5 transition-transform"
+                        >
+                          <span>Raport</span>
+                          <span>&rarr;</span>
+                        </Link>
+                        <DeleteRecordingButton recordingId={rec.id} recordingTitle={rec.tytul} />
+                      </div>
                     </td>
                   </tr>
                 ))}
