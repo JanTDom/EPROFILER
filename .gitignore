@@ -27,8 +27,9 @@ storage/cache/*
 
 # Środowisko i sekrety
 .env
-.env.local
-.env.production
+.env*
+**/.env
+**/.env*
 *.pem
 
 # Systemowe

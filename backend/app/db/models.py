@@ -269,7 +269,7 @@ class PsychometricProfile(Base):
     wrogosc_vs_cieplo = Column(Float, default=0.0) # -1.0 wrogość do +1.0 ciepło
 
     # Prosty język
-    nastroj_glowny_prosty = Column(String(255), nullable=False)
+    nastroj_glowny_prosty = Column(Text, nullable=False)
     styl_komunikacji_prosty = Column(Text, nullable=False)
     czule_punkty_i_leki = Column(JSON, default=list) # lista tematów wyzwalających stres
     mocne_strony = Column(JSON, default=list) # w czym mówca był opanowany i skuteczny

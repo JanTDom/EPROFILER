@@ -24,7 +24,10 @@ class Settings(BaseSettings):
     HF_TOKEN: str = ""
 
     model_config = SettingsConfigDict(
-        env_file=str(Path(__file__).resolve().parent.parent.parent / ".env"),
+        env_file=[
+            str(Path(__file__).resolve().parent.parent.parent / ".env"),
+            str(Path(__file__).resolve().parent.parent / ".env"),
+        ],
         env_file_encoding="utf-8",
         extra="ignore"
     )
