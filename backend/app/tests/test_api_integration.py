@@ -11,7 +11,7 @@ async def test_healthcheck():
         assert res.status_code == 200
         data = res.json()
         assert data["status"] == "healthy"
-        assert data["service"] == "DYSKURS"
+        assert data["service"] == "PROFILER"
 
 @pytest.mark.asyncio
 async def test_recordings_crud_flow():

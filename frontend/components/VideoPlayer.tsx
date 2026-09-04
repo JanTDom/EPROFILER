@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX } from "lucide-react";
+import { Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX, Gauge } from "lucide-react";
 import { getVideoUrl } from "@/lib/api";
 
 export const VideoPlayer: React.FC<{
@@ -14,6 +14,7 @@ export const VideoPlayer: React.FC<{
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
 
   useEffect(() => {
     if (seekToTimeSec !== undefined && seekToTimeSec !== null && videoRef.current) {
@@ -58,6 +59,13 @@ export const VideoPlayer: React.FC<{
     }
   };
 
+  const changeSpeed = (speed: number) => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+      setPlaybackSpeed(speed);
+    }
+  };
+
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
@@ -80,6 +88,12 @@ export const VideoPlayer: React.FC<{
           onPause={() => setIsPlaying(false)}
           playsInline
         />
+
+        {playbackSpeed < 1.0 && (
+          <div className="absolute top-3 right-3 bg-red-600/90 text-white text-[10px] font-mono px-2 py-0.5 rounded shadow">
+            TRYB MIKROEKSPRESJI: {playbackSpeed}x
+          </div>
+        )}
       </div>
 
       {/* Kontrolki odtwarzacza */}
@@ -89,13 +103,13 @@ export const VideoPlayer: React.FC<{
           type="range"
           min={0}
           max={duration || 100}
-          step={0.1}
+          step={0.05}
           value={currentTime}
           onChange={handleSeek}
           className="w-full h-1.5 bg-slate-700 rounded-none accent-blue-500 cursor-pointer"
         />
 
-        <div className="flex items-center justify-between text-xs font-mono">
+        <div className="flex flex-wrap items-center justify-between text-xs font-mono gap-2">
           <div className="flex items-center gap-2">
             <button
               onClick={togglePlay}
@@ -124,7 +138,29 @@ export const VideoPlayer: React.FC<{
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Wybór prędkości (zwolnione tempo dla mikroekspresji) */}
+            <div className="flex items-center gap-1 text-[11px] bg-slate-800/80 p-0.5 rounded border border-slate-700">
+              <span className="text-slate-400 px-1 flex items-center gap-0.5">
+                <Gauge className="w-3 h-3" />
+                Tempo:
+              </span>
+              {[0.25, 0.5, 1.0].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => changeSpeed(s)}
+                  className={`px-1.5 py-0.5 rounded transition-colors ${
+                    playbackSpeed === s
+                      ? "bg-blue-600 text-white font-bold"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                  title={s === 0.25 ? "Zwolnione tempo 0.25x — inspekcja mikroekspresji twarzy" : `${s}x`}
+                >
+                  {s === 0.25 ? "0.25x (FACS)" : `${s}x`}
+                </button>
+              ))}
+            </div>
+
             <button
               onClick={() => {
                 if (videoRef.current) {

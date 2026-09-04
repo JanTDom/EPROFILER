@@ -5,7 +5,7 @@ set -e
 cd "$(dirname "$0")"
 
 echo "=========================================================="
-echo "          DYSKURS — Uruchamianie środowiska lokalnego     "
+echo "          PROFILER — Uruchamianie środowiska lokalnego    "
 echo "=========================================================="
 
 # 1. Sprawdź środowisko wirtualne Pythona

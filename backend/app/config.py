@@ -3,11 +3,11 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "DYSKURS"
+    PROJECT_NAME: str = "PROFILER"
     ENV: str = "development"
     
     # Baza danych: Domyślnie aiosqlite, jeśli brak zewnętrznego Postgresa
-    DATABASE_URL: str = "sqlite+aiosqlite:///./dyskurs.db"
+    DATABASE_URL: str = "sqlite+aiosqlite:///./profiler.db"
     
     # Redis
     REDIS_URL: str = "redis://localhost:6379/0"

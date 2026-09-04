@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { LegalNotice } from "@/components/LegalNotice";
+import { Eye, Shield } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "DYSKURS — System Analizy Wypowiedzi Publicznych",
-  description: "Aplikacja do obiektywnej analizy retoryki, unikania odpowiedzi i prozodii w wypowiedziach polityków.",
+  title: "PROFILER — Multimodalna Analiza Wypowiedzi i Mowy Ciała",
+  description: "Zaawansowany system badania dyskursu, mikroekspresji, intencji i emocji osób publicznych opisany w prostym języku.",
 };
 
 export default function RootLayout({
@@ -21,20 +22,25 @@ export default function RootLayout({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
             <div className="flex items-center gap-8">
               <Link href="/" className="flex items-center gap-2">
-                <span className="font-mono text-base font-black tracking-wider text-slate-950">
-                  DYSKURS
-                </span>
-                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 border border-slate-200">
-                  v1.0 Faza 1
-                </span>
+                <div className="w-7 h-7 bg-slate-950 text-white flex items-center justify-center font-mono font-black text-sm rounded">
+                  P
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-mono text-sm font-black tracking-wider text-slate-950 leading-none">
+                    PROFILER
+                  </span>
+                  <span className="text-[9px] text-slate-500 font-mono tracking-tight">
+                    INTELLIGENCE STUDIO
+                  </span>
+                </div>
               </Link>
 
               <nav className="hidden md:flex items-center gap-6 text-xs font-medium text-slate-600">
                 <Link href="/" className="hover:text-slate-900 transition-colors">
-                  Przegląd nagrań
+                  Baza nagrań
                 </Link>
                 <Link href="/recordings/new" className="hover:text-slate-900 transition-colors">
-                  Nowa analiza
+                  Nowe profilowanie
                 </Link>
               </nav>
             </div>
@@ -42,9 +48,10 @@ export default function RootLayout({
             <div className="flex items-center gap-3">
               <Link
                 href="/recordings/new"
-                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors"
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-colors flex items-center gap-1.5 rounded-sm"
               >
-                + Dodaj materiał
+                <Eye className="w-3.5 h-3.5 text-blue-400" />
+                + Profiluj wideo
               </Link>
             </div>
           </div>
@@ -60,7 +67,7 @@ export default function RootLayout({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <LegalNotice compact />
             <div className="mt-2 text-center text-[11px] text-slate-400 font-mono">
-              DYSKURS © 2026 — Rygorystyczna analiza dyskursu publicznego.
+              PROFILER © 2026 — Multimodal Behavioral Intelligence & Speech Analysis.
             </div>
           </div>
         </footer>

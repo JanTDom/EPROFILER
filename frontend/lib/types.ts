@@ -26,6 +26,7 @@ export interface Recording {
   krok_postepu: string;
   procent_postepu: number;
   blad?: string;
+  tryb_biometryczny?: boolean;
   created_at: string;
 }
 
@@ -56,7 +57,52 @@ export interface Marker {
   typ: "unik" | "technika_retoryczna" | "napiecie_prozodyczne" | "niespojnosc" | "przerwanie";
   etykieta: string;
   opis: string;
+  nazwa_prosta?: string;
+  wyjasnienie_proste?: string;
   pewnosc: number; // 0.0 - 1.0
   cytat_dowodowy: string;
   przeslanki: string[];
+}
+
+export interface BiometricEvent {
+  id: string;
+  recording_id: string;
+  start_ms: number;
+  end_ms: number;
+  typ_reakcji: string;
+  au_code?: string;
+  wartosc_zmierzona?: number;
+  odchylenie_od_bazy_pct?: number;
+  naglowek_prosty: string;
+  wyjasnienie_proste: string;
+  klatka_dowodowa_path?: string;
+  pewnosc: number;
+}
+
+export interface CongruenceEvent {
+  id: string;
+  recording_id: string;
+  start_ms: number;
+  end_ms: number;
+  slowa_mowione: string;
+  reakcja_ciala: string;
+  indeks_zgodnosci: number;
+  naglowek_prosty: string;
+  wyjasnienie_proste: string;
+}
+
+export interface PsychometricProfile {
+  id: string;
+  recording_id: string;
+  otwartosc: number;
+  sumiennosc: number;
+  ekstrawersja: number;
+  ugodowosc: number;
+  neurotyzm: number;
+  dominacja_vs_uleglosc: number;
+  wrogosc_vs_cieplo: number;
+  nastroj_glowny_prosty: string;
+  styl_komunikacji_prosty: string;
+  czule_punkty_i_leki: string[];
+  mocne_strony: string[];
 }

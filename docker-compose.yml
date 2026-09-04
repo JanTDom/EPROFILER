@@ -3,25 +3,25 @@ version: '3.8'
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: dyskurs-postgres
+    container_name: profiler-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: dyskurs
-      POSTGRES_PASSWORD: dyskurs_secret
-      POSTGRES_DB: dyskurs_db
+      POSTGRES_USER: profiler
+      POSTGRES_PASSWORD: profiler_secret
+      POSTGRES_DB: profiler_db
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dyskurs -d dyskurs_db"]
+      test: ["CMD-SHELL", "pg_isready -U profiler -d profiler_db"]
       interval: 5s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    container_name: dyskurs-redis
+    container_name: profiler-redis
     restart: unless-stopped
     ports:
       - "6379:6379"
@@ -37,13 +37,13 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: dyskurs-backend
+    container_name: profiler-backend
     restart: unless-stopped
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://dyskurs:dyskurs_secret@postgres:5432/dyskurs_db
+      - DATABASE_URL=postgresql+asyncpg://profiler:profiler_secret@postgres:5432/profiler_db
       - REDIS_URL=redis://redis:6379/0
       - STORAGE_DIR=/app/storage/media
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
@@ -61,11 +61,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: dyskurs-worker
+    container_name: profiler-worker
     restart: unless-stopped
     command: python -m app.workers.worker
     environment:
-      - DATABASE_URL=postgresql+asyncpg://dyskurs:dyskurs_secret@postgres:5432/dyskurs_db
+      - DATABASE_URL=postgresql+asyncpg://profiler:profiler_secret@postgres:5432/profiler_db
       - REDIS_URL=redis://redis:6379/0
       - STORAGE_DIR=/app/storage/media
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
@@ -83,7 +83,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: dyskurs-frontend
+    container_name: profiler-frontend
     restart: unless-stopped
     ports:
       - "3000:3000"

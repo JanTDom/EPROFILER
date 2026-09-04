@@ -23,11 +23,15 @@ export async function createRecordingFromUrl(data: {
   tytul?: string;
   typ_nagrania: RecordingType;
   data_publikacji?: string;
+  tryb_biometryczny?: boolean;
 }): Promise<Recording> {
   const res = await fetch(`${API_BASE}/api/recordings/url`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
+    body: JSON.stringify({
+      ...data,
+      tryb_biometryczny: data.tryb_biometryczny ?? true,
+    }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
