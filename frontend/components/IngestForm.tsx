@@ -17,7 +17,7 @@ import {
   ShieldCheck,
   Film
 } from "lucide-react";
-import { createRecordingFromUrl, uploadRecordingFile } from "@/lib/api";
+import { createRecordingFromUrl, uploadRecordingFile, sanitizeVideoUrl } from "@/lib/api";
 import { RecordingType } from "@/lib/types";
 import { getClientProfile, getClientCustomGeminiKey } from "@/lib/profile";
 import { LegalNotice } from "./LegalNotice";
@@ -158,8 +158,9 @@ export const IngestForm: React.FC = () => {
         if (!url.trim()) {
           throw new Error("Wklej poprawny adres URL do nagrania.");
         }
+        const cleanUrl = sanitizeVideoUrl(url);
         const created = await createRecordingFromUrl({
-          url: url.trim(),
+          url: cleanUrl,
           tytul: title.trim() || undefined,
           typ_nagrania: recordingType,
           data_publikacji: publicationDate || undefined,

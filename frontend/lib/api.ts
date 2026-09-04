@@ -94,6 +94,27 @@ export async function fetchRecording(id: string): Promise<Recording> {
   return res.json();
 }
 
+export function sanitizeVideoUrl(rawUrl: string): string {
+  if (!rawUrl) return rawUrl;
+  const trimmed = rawUrl.trim();
+  
+  // 1. YouTube standard 11-char ID extraction (handles watch?v=, youtu.be/, shorts/, live/, embed/, and double pasted URLs)
+  const ytMatch = trimmed.match(/(?:v=|\/vi\/|\/v\/|\/embed\/|\/shorts\/|\/live\/|youtu\.be\/|\/e\/)([a-zA-Z0-9_-]{11})/);
+  if (ytMatch && ytMatch[1]) {
+    return `https://www.youtube.com/watch?v=${ytMatch[1]}`;
+  }
+
+  // 2. Double paste of other http URLs
+  if ((trimmed.match(/http/g) || []).length > 1) {
+    const urls = trimmed.match(/https?:\/\/[^\s]+/g);
+    if (urls && urls.length > 0) {
+      return urls[urls.length - 1];
+    }
+  }
+
+  return trimmed;
+}
+
 export async function createRecordingFromUrl(data: {
   url: string;
   tytul?: string;
@@ -107,6 +128,8 @@ export async function createRecordingFromUrl(data: {
   gemini_api_key?: string;
 }): Promise<Recording> {
   const profileId = data.profile_id || 'profile_main';
+  const cleanUrl = sanitizeVideoUrl(data.url);
+  data.url = cleanUrl;
 
   // Try local worker first if available
   try {

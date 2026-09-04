@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import asyncio
 import subprocess
@@ -17,8 +18,33 @@ logger = logging.getLogger("profiler.media")
 
 class MediaService:
     @staticmethod
+    def sanitize_video_url(raw_url: str) -> str:
+        """
+        Oczyszcza i normalizuje wklejony URL (np. naprawia podwójne wklejenie YouTube
+        lub doklejone prefiksy/sufiksy).
+        """
+        if not raw_url:
+            return raw_url
+        cleaned = raw_url.strip()
+        
+        # 1. Wykryj standardowy identyfikator wideo YouTube (11 znaków)
+        yt_match = re.search(r'(?:v=|\/vi\/|\/v\/|\/embed\/|\/shorts\/|\/live\/|youtu\.be\/|\/e\/)([a-zA-Z0-9_-]{11})', cleaned)
+        if yt_match:
+            video_id = yt_match.group(1)
+            return f"https://www.youtube.com/watch?v={video_id}"
+            
+        # 2. Jeśli podwójnie wklejono inny link z 'https://'
+        if cleaned.count("http") > 1:
+            parts = re.findall(r'https?://[^\s]+', cleaned)
+            if parts:
+                return parts[-1]
+                
+        return cleaned
+
+    @staticmethod
     async def download_from_url(url: str, recording_id: str) -> Dict[str, Any]:
         """Pobiera wideo z URL (np. YouTube) za pomocą yt-dlp z obsługą cache'u i certyfikatów."""
+        url = MediaService.sanitize_video_url(url)
         rec_dir = storage_service.get_recording_dir(recording_id)
         
         # 1. Sprawdź, czy plik źródłowy nie został już pobrany

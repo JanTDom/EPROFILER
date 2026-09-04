@@ -52,7 +52,7 @@ class Recording(Base):
     # 'OCZEKUJE', 'POBIERANIE', 'TRANSKODOWANIE', 'EKSTRAKCJA_AUDIO', 
     # 'TRANSKRYPCJA', 'DIARYZACJA', 'RETORYKA', 'PROZODIA', 'ZAKONCZONE', 'BLAD'
     status_przetwarzania = Column(String(50), default="OCZEKUJE", index=True)
-    krok_postepu = Column(String(100), default="Utworzono zadanie")
+    krok_postepu = Column(Text, default="Utworzono zadanie")
     procent_postepu = Column(Integer, default=0)
     
     sciezka_wideo = Column(Text, nullable=True)

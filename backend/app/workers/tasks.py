@@ -31,7 +31,7 @@ async def update_recording_progress(
                     return
 
                 rec.status_przetwarzania = status
-                rec.krok_postepu = krok
+                rec.krok_postepu = krok[:250] if krok else "Przetwarzanie..."
                 rec.procent_postepu = procent
                 if sciezka_wideo:
                     rec.sciezka_wideo = sciezka_wideo
@@ -258,10 +258,12 @@ async def run_pipeline_step_by_step(recording_id: str) -> None:
         err_msg = str(e)
         if "key=" in err_msg or "AIzaSy" in err_msg or "apikey" in err_msg.lower():
             err_msg = "Wystąpił błąd autoryzacji lub komunikacji z modelem AI."
+        
+        display_err = err_msg if len(err_msg) < 140 else err_msg[:137] + "..."
         await update_recording_progress(
             recording_id,
             status="BLAD",
-            krok=f"Błąd przetwarzania: {err_msg}",
+            krok=f"Błąd przetwarzania: {display_err}",
             procent=100,
             blad=err_msg
         )

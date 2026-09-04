@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Link2, User, ArrowRight, Loader2, Sparkles } from "lucide-react";
-import { createRecordingFromUrl } from "@/lib/api";
+import { createRecordingFromUrl, sanitizeVideoUrl } from "@/lib/api";
 import { getClientProfile, getClientCustomGeminiKey } from "@/lib/profile";
 
 export const QuickIngestBar: React.FC = () => {
@@ -23,9 +23,10 @@ export const QuickIngestBar: React.FC = () => {
     try {
       const activeProfile = getClientProfile();
       const customKey = getClientCustomGeminiKey() || undefined;
+      const cleanUrl = sanitizeVideoUrl(url);
 
       const rec = await createRecordingFromUrl({
-        url: url.trim(),
+        url: cleanUrl,
         polityk_docelowy: targetPolitician.trim() || undefined,
         rola_polityka: "Badany polityk",
         typ_nagrania: "wywiad",

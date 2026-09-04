@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.db.models import Recording, PsychometricProfile
 from app.services.storage import storage_service
+from app.services.media import MediaService
 from app.workers.queue import task_queue
 from app.workers.tasks import run_pipeline_step_by_step
 
@@ -97,11 +98,12 @@ async def get_recording(recording_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.post("/url", response_model=RecordingResponse, status_code=status.HTTP_201_CREATED)
 async def create_recording_from_url(payload: CreateFromUrlRequest, db: AsyncSession = Depends(get_db)):
-    title = payload.tytul.strip() if payload.tytul else f"Nagranie z URL ({payload.url[:40]}...)"
+    clean_url = MediaService.sanitize_video_url(payload.url)
+    title = payload.tytul.strip() if payload.tytul else f"Nagranie z URL ({clean_url[:40]}...)"
     
     rec = Recording(
         zrodlo_typ="url",
-        zrodlo_url=payload.url,
+        zrodlo_url=clean_url,
         tytul=title,
         data_publikacji=payload.data_publikacji,
         typ_nagrania=payload.typ_nagrania,
