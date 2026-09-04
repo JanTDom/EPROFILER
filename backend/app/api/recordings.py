@@ -26,6 +26,10 @@ class RecordingResponse(BaseModel):
     blad: Optional[str] = None
     tryb_biometryczny: bool = True
     zakres_analizy: str = "pelny" # "pelny" (wszystko) | "behawioralny" (tylko zachowanie i stan psychiczny)
+    polityk_docelowy: Optional[str] = None
+    rola_polityka: Optional[str] = "Badany polityk"
+    speaker_docelowy_tag: Optional[str] = None
+    rozpoznani_mowcy: Optional[List[dict]] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
@@ -37,6 +41,13 @@ class CreateFromUrlRequest(BaseModel):
     data_publikacji: Optional[datetime] = None
     tryb_biometryczny: bool = True
     zakres_analizy: str = "pelny" # "pelny" | "behawioralny"
+    polityk_docelowy: Optional[str] = None
+    rola_polityka: Optional[str] = "Badany polityk"
+
+class SetTargetSpeakerRequest(BaseModel):
+    speaker_tag: str
+    imie_nazwisko: Optional[str] = None
+    rola: Optional[str] = None
 
 @router.get("", response_model=List[RecordingResponse])
 async def list_recordings(db: AsyncSession = Depends(get_db)):
@@ -65,6 +76,8 @@ async def create_recording_from_url(payload: CreateFromUrlRequest, db: AsyncSess
         typ_nagrania=payload.typ_nagrania,
         tryb_biometryczny=payload.tryb_biometryczny,
         zakres_analizy=payload.zakres_analizy,
+        polityk_docelowy=payload.polityk_docelowy.strip() if payload.polityk_docelowy else None,
+        rola_polityka=payload.rola_polityka.strip() if payload.rola_polityka else "Badany polityk",
         status_przetwarzania="POBIERANIE",
         krok_postepu="Zadanie zakolejkowane do pobrania..."
     )
@@ -84,6 +97,8 @@ async def upload_recording_file(
     data_publikacji: Optional[str] = Form(None),
     tryb_biometryczny: bool = Form(True),
     zakres_analizy: str = Form("pelny"),
+    polityk_docelowy: Optional[str] = Form(None),
+    rola_polityka: Optional[str] = Form("Badany polityk"),
     db: AsyncSession = Depends(get_db)
 ):
     title = tytul.strip() if tytul else file.filename
@@ -101,6 +116,8 @@ async def upload_recording_file(
         typ_nagrania=typ_nagrania,
         tryb_biometryczny=tryb_biometryczny,
         zakres_analizy=zakres_analizy,
+        polityk_docelowy=polityk_docelowy.strip() if polityk_docelowy else None,
+        rola_polityka=rola_polityka.strip() if rola_polityka else "Badany polityk",
         status_przetwarzania="PRZETWARZANIE",
         krok_postepu="Zapisano plik. Uruchamianie przetwarzania..."
     )
@@ -115,6 +132,43 @@ async def upload_recording_file(
 
     # Uruchom potok
     task_queue.enqueue(run_pipeline_step_by_step, rec.id)
+    return rec
+
+@router.patch("/{recording_id}/target-speaker", response_model=RecordingResponse)
+async def set_target_speaker(
+    recording_id: str,
+    payload: SetTargetSpeakerRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Pozwala zdefiniować lub zmienić cel profilowania (który mówca jest badanym politykiem).
+    """
+    stmt = select(Recording).where(Recording.id == recording_id)
+    result = await db.execute(stmt)
+    rec = result.scalar_one_or_none()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Nagranie nie zostało znalezione.")
+
+    rec.speaker_docelowy_tag = payload.speaker_tag
+    if payload.imie_nazwisko:
+        rec.polityk_docelowy = payload.imie_nazwisko
+    if payload.rola:
+        rec.rola_polityka = payload.rola
+
+    # Zaktualizuj flagę is_target / jest_celem na liście rozpoznanych mówców
+    if rec.rozpoznani_mowcy:
+        updated_mowcy = []
+        for m in rec.rozpoznani_mowcy:
+            item = dict(m)
+            is_match = item.get("speaker_tag") == payload.speaker_tag
+            item["jest_celem"] = is_match
+            if is_match and payload.imie_nazwisko:
+                item["imie_nazwisko"] = payload.imie_nazwisko
+            updated_mowcy.append(item)
+        rec.rozpoznani_mowcy = updated_mowcy
+
+    await db.commit()
+    await db.refresh(rec)
     return rec
 
 @router.delete("/{recording_id}", status_code=status.HTTP_204_NO_CONTENT)

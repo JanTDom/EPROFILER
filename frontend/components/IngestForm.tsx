@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Link2, Upload, Loader2, ArrowRight, Eye, Sparkles } from "lucide-react";
+import { Link2, Upload, Loader2, ArrowRight, Eye, Sparkles, UserCheck } from "lucide-react";
 import { createRecordingFromUrl, uploadRecordingFile } from "@/lib/api";
 import { RecordingType } from "@/lib/types";
 import { LegalNotice } from "./LegalNotice";
@@ -17,6 +17,8 @@ export const IngestForm: React.FC = () => {
   const [url, setUrl] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
+  const [targetPolitician, setTargetPolitician] = useState("");
+  const [politicianRole, setPoliticianRole] = useState("Badany polityk");
   const [recordingType, setRecordingType] = useState<RecordingType>("wywiad");
   const [publicationDate, setPublicationDate] = useState("");
   const [enableBiometrics, setEnableBiometrics] = useState(true);
@@ -39,6 +41,8 @@ export const IngestForm: React.FC = () => {
           data_publikacji: publicationDate || undefined,
           tryb_biometryczny: enableBiometrics,
           zakres_analizy: analysisScope,
+          polityk_docelowy: targetPolitician.trim() || undefined,
+          rola_polityka: politicianRole,
         });
         router.push(`/recordings/${created.id}`);
       } else {
@@ -52,6 +56,8 @@ export const IngestForm: React.FC = () => {
         if (publicationDate) formData.append("data_publikacji", publicationDate);
         formData.append("tryb_biometryczny", enableBiometrics ? "true" : "false");
         formData.append("zakres_analizy", analysisScope);
+        if (targetPolitician.trim()) formData.append("polityk_docelowy", targetPolitician.trim());
+        formData.append("rola_polityka", politicianRole);
 
         const created = await uploadRecordingFile(formData);
         router.push(`/recordings/${created.id}`);
@@ -195,6 +201,61 @@ export const IngestForm: React.FC = () => {
             onChange={(e) => setTitle(e.target.value)}
             className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/80 border border-studio-border/80 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 transition-all"
           />
+        </div>
+
+        {/* Wskazanie badanego polityka (Kluczowe przy wielu mówcach) */}
+        <div className="p-4 bg-gradient-to-r from-blue-950/30 via-studio-surface/60 to-studio-surface/40 border border-cyan-500/30 rounded-xl space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-100 flex items-center gap-2">
+              <UserCheck className="w-4 h-4 text-cyan-400" />
+              <span>Cel profilowania (Kogo badamy?)</span>
+            </label>
+            <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/70 px-2 py-0.5 border border-cyan-500/40 rounded">
+              ROZPOZNAWANIE MÓWCÓW
+            </span>
+          </div>
+
+          <p className="text-[11px] text-slate-400 leading-relaxed">
+            Gdy w nagraniu rozmawia kilku polityków lub dziennikarz zadaje pytania, wskaż nazwisko osoby, którą system ma zidentyfikować i prześwietlić (jej emocje, mimikę, mowę ciała i reakcje na stres).
+          </p>
+
+          <div>
+            <input
+              type="text"
+              placeholder="np. Donald Tusk, Sławomir Mentzen, Mateusz Morawiecki... (lub puste: automatyczne wykrycie)"
+              value={targetPolitician}
+              onChange={(e) => setTargetPolitician(e.target.value)}
+              className="w-full px-3.5 py-2.5 text-xs bg-studio-surface/90 border border-cyan-500/50 rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/30 font-medium transition-all"
+            />
+          </div>
+
+          {/* Szybkie presety */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[10px]">
+            <span className="text-slate-500 font-mono">Szybki wybór:</span>
+            {["Donald Tusk", "Mateusz Morawiecki", "Sławomir Mentzen", "Rafał Trzaskowski", "Krzysztof Bosak"].map((name) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => setTargetPolitician(name)}
+                className={`px-2 py-0.5 border rounded transition-colors ${
+                  targetPolitician === name
+                    ? "bg-cyan-500/20 border-cyan-400 text-cyan-300"
+                    : "bg-studio-surface border-studio-border hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300"
+                }`}
+              >
+                {name}
+              </button>
+            ))}
+            {targetPolitician && (
+              <button
+                type="button"
+                onClick={() => setTargetPolitician("")}
+                className="px-2 py-0.5 text-slate-400 hover:text-red-400 underline transition-colors"
+              >
+                Wyczyść
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Wybór zakresu profilowania: Oceń wszystko vs Tylko stan psychiczny */}

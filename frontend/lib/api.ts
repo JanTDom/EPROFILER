@@ -25,6 +25,8 @@ export async function createRecordingFromUrl(data: {
   data_publikacji?: string;
   tryb_biometryczny?: boolean;
   zakres_analizy?: "pelny" | "behawioralny";
+  polityk_docelowy?: string;
+  rola_polityka?: string;
 }): Promise<Recording> {
   const res = await fetch(`${API_BASE}/api/recordings/url`, {
     method: "POST",
@@ -33,11 +35,29 @@ export async function createRecordingFromUrl(data: {
       ...data,
       tryb_biometryczny: data.tryb_biometryczny ?? true,
       zakres_analizy: data.zakres_analizy ?? "pelny",
+      polityk_docelowy: data.polityk_docelowy?.trim() || undefined,
+      rola_polityka: data.rola_polityka?.trim() || "Badany polityk",
     }),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail || "Nie udało się zakolejkować nagrania z URL.");
+  }
+  return res.json();
+}
+
+export async function setTargetSpeaker(
+  recordingId: string,
+  payload: { speaker_tag: string; imie_nazwisko?: string; rola?: string }
+): Promise<Recording> {
+  const res = await fetch(`${API_BASE}/api/recordings/${recordingId}/target-speaker`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || "Nie udało się zmienić badanego polityka.");
   }
   return res.json();
 }

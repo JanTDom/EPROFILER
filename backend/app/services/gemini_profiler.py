@@ -178,4 +178,60 @@ Zwróć JSON:
 
         return await self._call_gemini_json(prompt)
 
+    async def identify_and_attribute_speakers(
+        self,
+        fragmenty_transkrypcji: List[Dict[str, Any]],
+        wskazany_polityk: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Rozpoznaje tożsamość i role mówców w nagraniu (SPEAKER_00, SPEAKER_01...)
+        oraz ustala, który mówca to wskazany przez użytkownika polityk (cel profilowania).
+        """
+        # Przygotuj reprezentatywne próbki wypowiedzi dla każdego mówcy
+        tekst_probek = ""
+        for item in fragmenty_transkrypcji[:25]:
+            speaker = item.get("speaker_tag", "MÓWCA")
+            text = item.get("tekst", "").strip()
+            tekst_probek += f"[{speaker}]: {text}\n"
+
+        target_info = (
+            f"Użytkownik wskazał jako polityka do profilowania: '{wskazany_polityk}'."
+            if wskazany_polityk
+            else "Użytkownik nie podał nazwiska. Rozpoznaj tożsamości mówców i wyznacz głównego badanego polityka/gościa."
+        )
+
+        prompt = f"""Dostajesz fragmenty transkrypcji nagrania z przypisanymi tagami mówców (SPEAKER_00, SPEAKER_01 itd.).
+{target_info}
+
+Twoim zadaniem jest:
+1. Rozpoznanie tożsamości osób (imię, nazwisko, funkcja/rola) na podstawie:
+   - sposobu w jaki rozmówcy się do siebie zwracają (np. „Panie Premierze”, „Panie Pośle”, „Pani Redaktor”, po imieniu),
+   - kontekstu wypowiedzi (kto zadaje pytania, kto się tłumaczy, kto reprezentuje partię/rząd),
+   - charakterystycznych tematów lub przedstawiania się.
+2. Wskazanie, który tag mówcy (np. SPEAKER_01) odpowiada badanemu politykowi.
+3. Podanie dla każdego mówcy cytatu dowodowego i pewności (0.0-1.0).
+
+TRANSKRYPCJA:
+{tekst_probek}
+
+Zwróć poprawny JSON:
+{{
+  "mowcy": [
+    {{
+      "speaker_tag": "SPEAKER_00",
+      "imie_nazwisko": "np. Monika Olejnik / Dziennikarz",
+      "rola": "Dziennikarz / Prowadzący | Badany polityk | Kontrkandydat / Adwersarz",
+      "opis": "Krótkie wyjaśnienie roli w rozmowie",
+      "jest_celem": true/false,
+      "cytat_dowodowy": "dosłowny cytat uzasadniający tożsamość",
+      "pewnosc": 0.0-1.0
+    }}
+  ],
+  "wybrany_speaker_tag": "SPEAKER_XX",
+  "polityk_docelowy_nazwisko": "Imię i nazwisko wybranego polityka",
+  "uzasadnienie_wyboru": "1-2 zdania prostym językiem polskim dlaczego ten mówca to cel profilowania"
+}}"""
+        return await self._call_gemini_json(prompt)
+
 gemini_profiler = GeminiProfilerService()
+

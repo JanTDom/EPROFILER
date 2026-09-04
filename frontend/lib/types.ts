@@ -14,6 +14,16 @@ export type ProcessingStatus =
   | "ZAKONCZONE"
   | "BLAD";
 
+export interface DetectedSpeaker {
+  speaker_tag: string;
+  imie_nazwisko?: string;
+  rola?: string;
+  opis?: string;
+  jest_celem: boolean;
+  cytat_dowodowy?: string;
+  pewnosc?: number;
+}
+
 export interface Recording {
   id: string;
   tytul: string;
@@ -28,6 +38,10 @@ export interface Recording {
   blad?: string;
   tryb_biometryczny?: boolean;
   zakres_analizy?: "pelny" | "behawioralny";
+  polityk_docelowy?: string;
+  rola_polityka?: string;
+  speaker_docelowy_tag?: string;
+  rozpoznani_mowcy?: DetectedSpeaker[];
   created_at: string;
 }
 
