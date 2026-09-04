@@ -131,7 +131,44 @@ export async function createRecordingFromUrl(data: {
   const cleanUrl = sanitizeVideoUrl(data.url);
   data.url = cleanUrl;
 
-  // Try local worker first if available
+  // 1. Standalone Cloud Analysis (/api/analyze)
+  // Działa w 100% w chmurze na Vercel + Gemini — bez potrzeby Antigravity czy lokalnego uvicorn!
+  try {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (data.gemini_api_key) {
+      headers["x-gemini-api-key"] = data.gemini_api_key;
+    }
+
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        ...data,
+        url: cleanUrl,
+        profile_id: profileId,
+        tryb_biometryczny: data.tryb_biometryczny ?? true,
+        zakres_analizy: data.zakres_analizy ?? "pelny",
+        polityk_docelowy: data.polityk_docelowy?.trim() || undefined,
+        rola_polityka: data.rola_polityka?.trim() || "Badany polityk",
+      }),
+    });
+
+    if (res.ok) {
+      const created = await res.json();
+      return normalizeRecording(created);
+    }
+    const errData = await res.json().catch(() => ({}));
+    if (errData?.detail) {
+      throw new Error(errData.detail);
+    }
+  } catch (e: any) {
+    if (e?.message && !e.message.includes("fetch")) {
+      throw e;
+    }
+    console.warn("Cloud /api/analyze fallback:", e);
+  }
+
+  // 2. Fallback do lokalnego API jeśli jest włączone
   try {
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (data.gemini_api_key) {
