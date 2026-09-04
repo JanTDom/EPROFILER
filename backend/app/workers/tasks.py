@@ -255,10 +255,13 @@ async def run_pipeline_step_by_step(recording_id: str) -> None:
 
     except Exception as e:
         logger.exception(f"Błąd potoku dla nagrania {recording_id}: {str(e)}")
+        err_msg = str(e)
+        if "key=" in err_msg or "AIzaSy" in err_msg or "apikey" in err_msg.lower():
+            err_msg = "Wystąpił błąd autoryzacji lub komunikacji z modelem AI."
         await update_recording_progress(
             recording_id,
             status="BLAD",
-            krok=f"Błąd przetwarzania: {str(e)}",
+            krok=f"Błąd przetwarzania: {err_msg}",
             procent=100,
-            blad=str(e)
+            blad=err_msg
         )

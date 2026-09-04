@@ -87,7 +87,7 @@ class NumberedCanvas(canvas.Canvas):
         self.setLineWidth(0.5)
         self.line(36, 30, 595 - 36, 30)
         
-        self.drawString(36, 18, "PROFILER AI Studio • System analizy dyskursu i profilowania behawioralnego")
+        self.drawString(36, 18, "E-PROFILER • Copyright by Multinewsroom (multinewsroom.pl)")
         self.setFont("ProfilerFontBold", 7.5)
         self.setFillColor(colors.HexColor("#64748b"))
         self.drawRightString(595 - 36, 18, f"Strona {self._pageNumber} z {page_count}")
@@ -97,7 +97,7 @@ class NumberedCanvas(canvas.Canvas):
             self.line(36, 812, 595 - 36, 812)
             self.setFont("ProfilerFont", 7.5)
             self.setFillColor(colors.HexColor("#64748b"))
-            self.drawString(36, 818, "PROFILER • Raport audytu wystąpienia i marketingu politycznego")
+            self.drawString(36, 818, "E-PROFILER • Raport audytu wystąpienia i marketingu politycznego")
             self.drawRightString(595 - 36, 818, "DOKUMENT ANALITYCZNY • POUFNE")
             
         self.restoreState()
@@ -253,7 +253,7 @@ class ReportPDFGenerator:
 
         # 1. Elegancka winieta gabinetowa (Masthead)
         masthead_cell = [
-            Paragraph("PROFILER FORENSIC INTELLIGENCE • SYSTEM AUDYTU DYSKURSU", s_masthead_tag),
+            Paragraph("E-PROFILER FORENSIC INTELLIGENCE • SYSTEM AUDYTU DYSKURSU", s_masthead_tag),
             Paragraph(f"Raport audytu wystąpienia: {target_name}", s_masthead_title),
             Paragraph(f"Rola: {role_name} &nbsp;•&nbsp; Format: {recording.typ_nagrania} &nbsp;•&nbsp; Czas trwania: {duration_min}m {duration_sec}s &nbsp;•&nbsp; Temat: {topic_name}", s_masthead_sub)
         ]
@@ -269,8 +269,8 @@ class ReportPDFGenerator:
         elements.append(Spacer(1, 10))
 
         # 2. Karta werdyktu strategicznego (Czy wypadł dobrze czy źle?)
-        verdict = mkt.get("werdykt") or "Bilans pozytywny"
-        score = mkt.get("ocena_punktowa_1_10") or 8
+        verdict = mkt.get("werdykt") or "Bilans zrównoważony"
+        score = int(mkt.get("ocena_punktowa_1_10") or 5)
         verdict_reason = mkt.get("uzasadnienie_werdyktu") or (profile.nastroj_glowny_prosty if profile else "Brak uzasadnienia.")
 
         # Kolorystyka akcentu w zależności od oceny
@@ -767,7 +767,7 @@ class ReportPDFGenerator:
         elements.append(Spacer(1, 10))
 
         # 9. Nota prawna
-        disclaimer = "Raport wygenerowany automatycznie przez system PROFILER na podstawie analizy sygnałów wideo i audio. Wyniki stanowią skalibrowane hipotezy badawczo-doradcze, a nie orzeczenia faktograficzne."
+        disclaimer = "Raport wygenerowany automatycznie przez system E-PROFILER w ramach medioznawczej analizy debaty publicznej (art. 85 RODO / prawo prasowe). Wyniki stanowią skalibrowane hipotezy badawczo-doradcze, a nie orzeczenia faktograficzne czy wyroki."
         elements.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#cbd5e1"), spaceBefore=2, spaceAfter=4))
         elements.append(Paragraph(disclaimer, ParagraphStyle("Disc", parent=s_body, fontSize=7, leading=9.5, textColor=c_slate_400)))
 

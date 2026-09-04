@@ -60,6 +60,7 @@ class Recording(Base):
     blad = Column(Text, nullable=True)
     tryb_biometryczny = Column(Boolean, default=True) # flaga włączenia modułu biometrii
     zakres_analizy = Column(String(50), default="pelny") # "pelny" (wszystko) | "behawioralny" (tylko zachowanie i stan psychiczny)
+    profile_id = Column(String(50), default="profile_main", index=True) # "profile_main" lub "profile_custom"
     
     # Rozpoznawanie i cel profilowania (gdy mówi kilku polityków)
     polityk_docelowy = Column(String(255), nullable=True) # Wskazany z góry polityk (np. "Donald Tusk")

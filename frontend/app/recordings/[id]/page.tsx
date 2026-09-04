@@ -7,6 +7,7 @@ import { fetchRecording, setTargetSpeaker, retryRecording, getRecordingPdfUrl } 
 import { Recording, DetectedSpeaker } from "@/lib/types";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import { VideoPlayer } from "@/components/VideoPlayer";
+import { LegalNotice } from "@/components/LegalNotice";
 import {
   ArrowLeft,
   Clock,
@@ -94,7 +95,7 @@ export default function RecordingDetailPage() {
     return (
       <div className="p-16 text-center text-xs text-slate-400 font-mono flex flex-col items-center justify-center gap-3">
         <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
-        <span>Inicjalizacja modułów PROFILER Cyber-Forensics Studio...</span>
+        <span>Inicjalizacja modułów E-PROFILER Cyber-Forensics Studio...</span>
       </div>
     );
   }
@@ -382,7 +383,7 @@ export default function RecordingDetailPage() {
             <div className="aspect-video bg-studio-card/90 border border-studio-border/80 rounded-2xl flex flex-col items-center justify-center text-center p-6 text-slate-400 shadow-xl backdrop-blur-xl">
               <Activity className="w-10 h-10 text-cyan-400 mb-3 animate-pulse" />
               <p className="text-xs font-semibold text-slate-200">
-                PROFILER przetwarza materiał wideo...
+                E-PROFILER przetwarza materiał wideo...
               </p>
               <p className="text-[11px] text-slate-400 mt-1 max-w-sm">
                 Generujemy zoptymalizowany podgląd 720p oraz ścieżkę dźwiękową 16kHz do analizy drżenia głosu i transkrypcji.
@@ -994,7 +995,7 @@ export default function RecordingDetailPage() {
               <div className="p-8 bg-studio-surface/40 border border-cyan-500/30 rounded-xl flex flex-col items-center justify-center text-center space-y-3">
                 <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
                 <div className="text-xs font-bold text-slate-100">
-                  PROFILER AI analizuje treść i zachowanie w tym nagraniu...
+                  E-PROFILER AI analizuje treść i zachowanie w tym nagraniu...
                 </div>
                 <p className="text-[11px] text-slate-400 max-w-md leading-relaxed">
                   {recording.krok_postepu || "Trwa przetwarzanie ścieżki dźwiękowej i mimiki twarzy."} ({recording.procent_postepu}%)
@@ -1022,7 +1023,7 @@ export default function RecordingDetailPage() {
               className="w-full p-4 flex items-center justify-between text-xs font-semibold text-slate-300 hover:text-cyan-300 hover:bg-studio-surface/60 transition-colors"
             >
               <span className="flex items-center gap-2">
-                🔬 Twarde pomiary profilera i laboratoryjne (FACS i akustyka)
+                🔬 Twarde pomiary E-PROFILERA (parametry behawioralne i akustyczne)
               </span>
               {showTechnicalDrawer ? <ChevronUp className="w-4 h-4 text-cyan-400" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
             </button>
@@ -1075,7 +1076,7 @@ export default function RecordingDetailPage() {
           <div className="bg-studio-card/90 border border-studio-border/80 p-5 text-xs font-mono space-y-2.5 rounded-2xl shadow-xl">
             <div className="font-bold text-slate-200 uppercase tracking-wider text-[11px] pb-2 border-b border-studio-border/70 flex items-center justify-between">
               <span>Specyfikacja potoku</span>
-              <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 border border-cyan-500/40 rounded">PROFILER v2</span>
+              <span className="text-[10px] text-cyan-400 bg-cyan-950/60 px-2 py-0.5 border border-cyan-500/40 rounded">E-PROFILER v2</span>
             </div>
             <div className="flex justify-between py-0.5 text-slate-400">
               <span>Podgląd wideo:</span>
@@ -1087,15 +1088,15 @@ export default function RecordingDetailPage() {
             </div>
             <div className="flex justify-between py-0.5 text-slate-400">
               <span>Rozpoznanie osób:</span>
-              <span className="text-cyan-400 font-semibold">Diarizacja + Gemini AI</span>
+              <span className="text-cyan-400 font-semibold">Diarizacja + Neural Core AI</span>
             </div>
             <div className="flex justify-between py-0.5 text-slate-400">
               <span>Wizja i Mimika:</span>
-              <span className="text-slate-200 font-semibold">MediaPipe / FACS AU</span>
+              <span className="text-slate-200 font-semibold">Analiza ekspresji i mowy ciała</span>
             </div>
             <div className="flex justify-between py-0.5 text-slate-400">
               <span>Prozodia mowy:</span>
-              <span className="text-slate-200 font-semibold">Praat F0 + drżenie</span>
+              <span className="text-slate-200 font-semibold">Modulacja tonu i tempo mowy</span>
             </div>
             <div className="flex justify-between py-0.5 text-slate-400">
               <span>Język raportu:</span>
@@ -1103,6 +1104,11 @@ export default function RecordingDetailPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Nota prawna i etyczna */}
+      <div className="mt-8 pt-6 border-t border-studio-border/70">
+        <LegalNotice />
       </div>
     </div>
   );

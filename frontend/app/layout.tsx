@@ -6,7 +6,7 @@ import { LegalNotice } from "@/components/LegalNotice";
 import { Eye, Shield, Radio, Sparkles } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "PROFILER — Forensic Video & Speech Intelligence System",
+  title: "E-PROFILER — Forensic Video & Speech Intelligence System",
   description: "Zaawansowana analiza wideo, intencji, mikroekspresji FACS, mowy ciała i perswazji osób publicznych w prostym języku.",
   icons: {
     icon: [
@@ -34,7 +34,7 @@ export default function RootLayout({
                 <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(0,240,255,0.35)] border border-cyan-500/30 group-hover:scale-105 transition-transform flex-shrink-0">
                   <Image
                     src="/logo.png"
-                    alt="PROFILER"
+                    alt="E-PROFILER"
                     fill
                     className="object-cover"
                     priority
@@ -43,7 +43,7 @@ export default function RootLayout({
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <span className="font-mono text-base font-black tracking-widest text-white leading-none">
-                      PROFILER
+                      E-PROFILER
                     </span>
                     <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 rounded">
                       AI 3.6
@@ -99,8 +99,18 @@ export default function RootLayout({
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
             <LegalNotice compact />
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-slate-500 font-mono pt-2 border-t border-slate-900">
-              <span>PROFILER LABS © 2026 // SYSTEM PROFILOWANIA BEHAWIORALNEGO I DYSKURSU</span>
-              <span className="text-cyan-500/80">GEMINI 3.6 FLASH • EKMAN FACS • PRAAT DSP • WHISPERX</span>
+              <span>
+                E-PROFILER LABS © 2026 // © Copyright by{" "}
+                <a
+                  href="https://multinewsroom.pl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-cyan-400 hover:text-cyan-300 underline font-semibold transition-colors"
+                >
+                  Multinewsroom (multinewsroom.pl)
+                </a>
+              </span>
+              <span className="text-cyan-500/80">NEURAL CORE AI • EKMAN FACS • PRAAT DSP • WHISPERX</span>
             </div>
           </div>
         </footer>

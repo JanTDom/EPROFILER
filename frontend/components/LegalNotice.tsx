@@ -7,7 +7,7 @@ export const LegalNotice: React.FC<{ compact?: boolean }> = ({ compact }) => {
       <div className="flex items-center gap-2 text-xs text-slate-400 bg-studio-surface/80 px-3 py-2 border border-studio-border/60 rounded-lg">
         <ShieldCheck className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
         <span>
-          <strong className="text-slate-200">PROFILER:</strong> Analiza dotyczy wyłącznie publicznych wystąpień osób publicznych. Wyniki stanowią skalibrowane hipotezy naukowe, a nie wyroki.
+          <strong className="text-slate-200">E-PROFILER:</strong> Analiza dotyczy wyłącznie publicznych wystąpień osób publicznych. Wyniki stanowią skalibrowane hipotezy naukowe, a nie wyroki.
         </span>
       </div>
     );
@@ -17,10 +17,10 @@ export const LegalNotice: React.FC<{ compact?: boolean }> = ({ compact }) => {
     <div className="p-4 bg-studio-surface/40 border border-studio-border/60 rounded-xl text-slate-300 text-xs leading-relaxed backdrop-blur-sm">
       <div className="flex items-center gap-2 font-semibold text-slate-100 mb-2">
         <ShieldCheck className="w-4 h-4 text-cyan-400" />
-        <span className="tracking-wide">PROFILER — Standard prawny i etyczny (AI Act & RODO)</span>
+        <span className="tracking-wide">E-PROFILER — Standard prawny i etyczny (AI Act & RODO)</span>
       </div>
       <p className="text-slate-400 mb-3 text-[11px] leading-relaxed">
-        System <strong className="text-slate-200">PROFILER</strong> bada mowę ciała, mimikę (FACS), drżenie głosu i treść wypowiedzi <strong className="text-slate-200">osób pełniących funkcje publiczne</strong> w ramach działalności medioznawczej i analizy debaty publicznej (art. 85 RODO / prawo prasowe).
+        System <strong className="text-slate-200">E-PROFILER</strong> bada mowę ciała, mimikę (FACS), drżenie głosu i treść wypowiedzi <strong className="text-slate-200">osób pełniących funkcje publiczne</strong> w ramach działalności medioznawczej i analizy debaty publicznej (art. 85 RODO / prawo prasowe).
       </p>
       <ul className="space-y-1.5 text-[11px] text-slate-400">
         <li className="flex items-start gap-2">

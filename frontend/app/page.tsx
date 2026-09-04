@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { fetchRecordings } from "@/lib/api";
 import { Recording } from "@/lib/types";
+import { QuickIngestBar } from "@/components/QuickIngestBar";
 import {
   Video,
   Clock,
@@ -47,11 +49,15 @@ function getStatusBadge(status: string) {
 }
 
 export default async function DashboardPage() {
+  const cookieStore = await cookies();
+  const profileId = cookieStore.get('eprofiler_profile')?.value || 'profile_main';
+  const isCustomProfile = profileId === 'profile_custom';
+
   let recordings: Recording[] = [];
   let fetchError = null;
 
   try {
-    recordings = await fetchRecordings();
+    recordings = await fetchRecordings(profileId);
   } catch (err: any) {
     fetchError = err.message;
   }
@@ -70,11 +76,22 @@ export default async function DashboardPage() {
 
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center gap-1.5">
                 <Radio className="w-3 h-3 animate-pulse text-cyan-400" />
                 SYSTEM PROFILOWANIA MULTIMODALNEGO
               </span>
+              {isCustomProfile ? (
+                <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider bg-purple-950/90 text-purple-300 border border-purple-500/50 flex items-center gap-1.5 shadow-[0_0_10px_rgba(168,85,247,0.2)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
+                  PROFIL NIEZALEŻNY // WŁASNE API
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded text-[10px] font-mono font-bold tracking-wider bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  PROFIL GŁÓWNY // HISTORIA STANDARDOWA
+                </span>
+              )}
               <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1">
                 <Sparkles className="w-3 h-3" />
                 Silnik Prostego Języka Aktywny
@@ -82,7 +99,7 @@ export default async function DashboardPage() {
             </div>
 
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white font-mono">
-              STACJA DOWODZENIA <span className="text-cyan-400">PROFILERA</span>
+              STACJA DOWODZENIA <span className="text-cyan-400">E-PROFILERA</span>
             </h1>
 
             <p className="text-sm text-slate-300 leading-relaxed">
@@ -93,13 +110,18 @@ export default async function DashboardPage() {
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <Link
               href="/recordings/new"
-              className="px-6 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-mono font-bold text-xs uppercase tracking-wider rounded transition-all shadow-[0_0_25px_rgba(0,240,255,0.4)] flex items-center justify-center gap-2 group"
+              className="px-6 py-3.5 bg-slate-900/80 hover:bg-slate-800 text-slate-200 border border-slate-700 font-mono font-bold text-xs uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 group"
             >
-              <Eye className="w-4 h-4 text-slate-950" />
-              <span>+ Rozpocznij profilowanie</span>
-              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              <Eye className="w-4 h-4 text-cyan-400" />
+              <span>Zaawansowane opcje (Plik / Karta VOD)</span>
+              <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform text-cyan-400" />
             </Link>
           </div>
+        </div>
+
+        {/* BŁYSKAWICZNY FORMULARZ WPROWADZANIA LINKU I NAZWISKA */}
+        <div className="mt-6">
+          <QuickIngestBar />
         </div>
 
         {/* METRYKI TELEMETRYCZNE STUDIA */}
@@ -137,7 +159,7 @@ export default async function DashboardPage() {
               Mózg analityczny AI
             </span>
             <span className="text-xl font-black font-mono text-purple-400 mt-1.5 block">
-              GEMINI 3.6 FLASH
+              AUTORSKI SILNIK AI
             </span>
           </div>
         </div>
@@ -155,7 +177,7 @@ export default async function DashboardPage() {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 bg-cyan-400 rounded-full" />
             <h2 className="text-sm font-mono font-bold uppercase tracking-wider text-slate-200">
-              Materiały w repozytorium PROFILERA
+              Materiały w repozytorium E-PROFILERA
             </h2>
           </div>
           <span className="text-xs font-mono text-slate-500">
@@ -172,7 +194,7 @@ export default async function DashboardPage() {
               Brak zarejestrowanych materiałów
             </h3>
             <p className="text-xs text-slate-400 mt-1.5 max-w-md mx-auto leading-relaxed">
-              Wprowadź publiczny wywiad z YouTube lub wgraj plik wideo, aby PROFILER zbadał reakcje mówcy, uniki i przekonywalność w prostym języku.
+              Wprowadź publiczny wywiad z YouTube lub wgraj plik wideo, aby E-PROFILER zbadał reakcje mówcy, uniki i przekonywalność w prostym języku.
             </p>
             <div className="mt-6">
               <Link

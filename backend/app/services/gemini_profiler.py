@@ -14,18 +14,21 @@ logger = logging.getLogger("profiler.gemini")
 
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent"
 
-SYSTEM_INSTRUCTION = """Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu PROFILER.
-Twoim celem jest rzetelny, krytyczny audyt wystąpienia publicznego osoby badanej. Nie tworzysz laurki ani pochlebstw — polityk i jego sztab potrzebują twardych, użytecznych ostrzeżeń, dekonstrukcji błędów oraz praktycznych wskazówek warsztatowych.
+SYSTEM_INSTRUCTION = """Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu E-PROFILER.
+Twoim celem jest rzetelny, krytyczny audyt wystąpienia publicznego osoby badanej (polityka, gościa, osoby diagnozowanej).
+Z kontekstu rozmowy, powitań, zapowiedzi i zadawanych pytań ZAWSZE automatycznie rozpoznajesz, kto jest dziennikarzem/prowadzącym, a kto osobą diagnozowaną. Twój audyt dotyczy wyłącznie osoby diagnozowanej.
+Nie tworzysz laurki ani pochlebstw — polityk i jego sztab potrzebują twardych, użytecznych ostrzeżeń, dekonstrukcji błędów oraz praktycznych wskazówek warsztatowych.
 
 OBOWIĄZUJĄ CIĘ ZASADY AUDYTU SZTABOWEGO I SPIN DOCTORINGU:
-1. CZUJNOŚĆ NA WYCIEKI EMOCJONALNE I NIEWERBALNE: Z całą surowością wychwytujesz emocje niedopuszczalne u lidera (irytacja, zniecierpliwienie, protekcjonalizm, uśmieszki wyższości i pogardy AU14, bezradność, nerwowość głosu, defensywne ucinanie wątków).
-2. DEKONSTRUKCJA NIELOGICZNOŚCI I PUSTOSŁOWIA: Punktujesz luki logiczne, brak ciągu przyczynowo-skutkowego, obietnice bez mechanizmu sprawczego, wewnętrzne sprzeczności oraz nieudolne próby ucieczki od odpowiedzi (toporny bridging).
-3. ANALIZA POWIERZCHNI ATAKU (AMUNICJA DLA OPONENTÓW): Identyfikujesz niefortunne sformułowania i tzw. 'samobóje', które sztaby konkurencji wytną na rolki, paski i spoty jako dowód słabości lub nieszczerości.
-4. WARSZTAT WYSTĄPIEŃ I DYKCJA: Oceniasz tempo mowy, intonację (unikanie intonacji pytającej przy twierdzeniach), pauzy retoryczne i natrętne wypełniacze.
-5. SKRYPTY NAPRAWCZE: Każdy zdiagnozowany błąd musi mieć gotowy szablon naprawczy ('Zamiast: X -> Mów: Y').
-6. KALIBRACJA OCENY: Kompresuj oceny ku środkowi skali (na skali 1-10 unikaj skrajności 1 czy 10; realistyczne, krytyczne wystąpienia pod presją mieszczą się typowo w przedziale 4-7/10).
-7. ZWIĘZŁOŚĆ I GĘSTOŚĆ INFORMACYJNA: Wszystkie opisy i uzasadnienia formułuj zwięźle, esencjonalnie, unikając rozwlekłości.
-8. FORMAT JĘZYKOWY: Pisz czystą polszczyzną w sentence case (tylko pierwsza litera zdania wielka). Odpowiadaj wyłącznie poprawnym JSON-em."""
+1. IDENTYFIKACJA OSOBY DIAGNOZOWANEJ Z KONTEKSTU: Zawsze na podstawie dynamiki wywiadu, zapowiedzi i powitań („Naszym gościem jest...”, „Panie Pośle/Ministrze/Premierze...”) precyzyjnie identyfikuj badanego gościa i to na nim skupiaj cały audyt.
+2. CZUJNOŚĆ NA WYCIEKI EMOCJONALNE I NIEWERBALNE: Z całą surowością wychwytujesz emocje niedopuszczalne u lidera (irytacja, zniecierpliwienie, protekcjonalizm, uśmieszki wyższości i pogardy AU14, bezradność, nerwowość głosu, defensywne ucinanie wątków).
+3. DEKONSTRUKCJA NIELOGICZNOŚCI I PUSTOSŁOWIA: Punktujesz luki logiczne, brak ciągu przyczynowo-skutkowego, obietnice bez mechanizmu sprawczego, wewnętrzne sprzeczności oraz nieudolne próby ucieczki od odpowiedzi (toporny bridging).
+4. ANALIZA POWIERZCHNI ATAKU (AMUNICJA DLA OPONENTÓW): Identyfikujesz niefortunne sformułowania i tzw. 'samobóje', które sztaby konkurencji wytną na rolki, paski i spoty jako dowód słabości lub nieszczerości.
+5. WARSZTAT WYSTĄPIEŃ I DYKCJA: Oceniasz tempo mowy, intonację (unikanie intonacji pytającej przy twierdzeniach), pauzy retoryczne i natrętne wypełniacze.
+6. SKRYPTY NAPRAWCZE: Każdy zdiagnozowany błąd musi mieć gotowy szablon naprawczy ('Zamiast: X -> Mów: Y').
+7. KALIBRACJA OCENY: Kompresuj oceny ku środkowi skali (na skali 1-10 unikaj skrajności 1 czy 10; realistyczne, krytyczne wystąpienia pod presją mieszczą się typowo w przedziale 4-7/10).
+8. ZWIĘZŁOŚĆ I GĘSTOŚĆ INFORMACYJNA: Wszystkie opisy i uzasadnienia formułuj zwięźle, esencjonalnie, unikając rozwlekłości.
+9. FORMAT JĘZYKOWY: Pisz czystą polszczyzną w sentence case (tylko pierwsza litera zdania wielka). Odpowiadaj wyłącznie poprawnym JSON-em."""
 
 class GeminiProfilerService:
     def __init__(self, api_key: Optional[str] = None):
@@ -36,7 +39,10 @@ class GeminiProfilerService:
         if not self.api_key:
             raise RuntimeError("Brak skonfigurowanego klucza GEMINI_API_KEY w pliku .env")
 
-        url = f"{GEMINI_API_URL}?key={self.api_key}"
+        headers = {
+            "x-goog-api-key": self.api_key,
+            "Content-Type": "application/json"
+        }
         payload = {
             "system_instruction": {
                 "parts": [{"text": SYSTEM_INSTRUCTION}]
@@ -54,9 +60,10 @@ class GeminiProfilerService:
         }
 
         async with httpx.AsyncClient(timeout=45.0) as client:
-            resp = await client.post(url, json=payload)
+            resp = await client.post(GEMINI_API_URL, json=payload, headers=headers)
             if resp.status_code != 200:
-                raise RuntimeError(f"Błąd Gemini API ({resp.status_code}): {resp.text}")
+                logger.error(f"Błąd API AI ({resp.status_code}): {resp.status_code}")
+                raise RuntimeError(f"Błąd API analizy AI ({resp.status_code})")
             
             data = resp.json()
             try:
@@ -265,21 +272,26 @@ Zwróć poprawny JSON:
         with open(mp3_path, "rb") as f:
             audio_b64 = base64.b64encode(f.read()).decode("utf-8")
 
-        target_info = f"Główny cel profilowania: {target_person}." if target_person else "Zidentyfikuj głównego badanego polityka/gościa."
+        target_info = (
+            f"Główny cel profilowania wskazany: {target_person}."
+            if target_person
+            else "KLUCZOWA ZASADA — IDENTYFIKACJA OSOBY DIAGNOZOWANEJ Z KONTEKSTU: Z powitań, zapowiedzi redakcyjnych („W studiu gościmy...”, „Naszym gościem jest...”), zwrotów formalnych („Panie Pośle/Ministrze/Premierze...”) oraz dynamiki pytań i odpowiedzi bezbłędnie wywnioskuj z kontekstu rozmowy, kim jest badany gość / polityk / ekspert (osoba diagnozowana). Oznacz go jako 'jest_celem': true."
+        )
 
-        prompt = f"""Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu PROFILER.
+        prompt = f"""Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu E-PROFILER.
 Odsłuchaj dołączone nagranie audio. {target_info}
 ZAKRES PROFILOWANIA: {"PEŁNY AUDYT SZTABOWY (psychologia, mowa ciała, nielogiczności, marketing polityczny, warsztat)" if zakres_analizy == "pelny" else "TYLKO STAN PSYCHICZNY I BEHAWIORALNY"}.
 
 ZASADY AUDYTU SZTABOWEGO:
-1. BEZWZGLĘDNA CZUJNOŚĆ I BRAK TARYFY ULGOWEJ: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach, wyciekach emocjonalnych i nielogicznościach, zanim obnażą je wrogie sztaby i dziennikarze.
-2. DETEKCJA NIEPOŻĄDANYCH EMOCJI: Wskaż momenty irytacji, zniecierpliwienia, belferskiego protekcjonalizmu, uśmieszków wyższości/pogardy (AU14), tonu bezradności lub defensywnego ucinania wątków.
-3. DETEKCJA NIELOGICZNOŚCI I LUK W ARGUMENTACJI: Wskaż sprzeczności wewnętrzne, obietnice bez mechanizmu wdrożenia, myślenie życzeniowe i toporne uniki od pytań.
-4. AMUNICJA DLA OPONENTÓW: Wskaż sformułowania, które przeciwnicy wytną na złośliwe setki, rolki czy memy (tzw. samobóje).
-5. SKRYPTY KOREKCYJNE: Do wytkniętych błędów podaj gotową, bezpieczną ripostę sztabową („Zamiast X -> Mów Y”).
-6. WARSZTAT WYSTĄPIEŃ I EMISJI: Oceń tempo, intonację (unikanie uptalku), pauzy i wypełniacze.
-7. KALIBRACJA OCENY: Skompresuj ocenę punktową 1-10 w stronę środka skali (zazwyczaj 4–7/10 w zależności od skali uchybień; unikaj zawyżania do 8–10 oraz skrajnego 1–2).
-8. FORMAT JĘZYKOWY: Sentence case (tylko pierwsza litera zdania wielka). Odpowiedź formułuj zwięźle, esencjonalnie i z wysoką gęstością faktów.
+1. ZROZUMIENIE I FOCUS NA OSOBIE DIAGNOZOWANEJ: Rozróżnij dziennikarza/prowadzącego (zadaje pytania, drąży temat) od OSOBY DIAGNOZOWANEJ (badany gość/polityk, który odpowiada, tłumaczy decyzje i jest poddawany audytowi). Cały profil, werdykt, błędy, uniki, ocena i mowa ciała MUSZĄ dotyczyć wyłącznie OSOBY DIAGNOZOWANEJ!
+2. BEZWZGLĘDNA CZUJNOŚĆ I BRAK TARYFY ULGOWEJ: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach, wyciekach emocjonalnych i nielogicznościach, zanim obnażą je wrogie sztaby i dziennikarze.
+3. DETEKCJA NIEPOŻĄDANYCH EMOCJI: Wskaż momenty irytacji, zniecierpliwienia, belferskiego protekcjonalizmu, uśmieszków wyższości/pogardy (AU14), tonu bezradności lub defensywnego ucinania wątków.
+4. DETEKCJA NIELOGICZNOŚCI I LUK W ARGUMENTACJI: Wskaż sprzeczności wewnętrzne, obietnice bez mechanizmu wdrożenia, myślenie życzeniowe i toporne uniki od pytań.
+5. AMUNICJA DLA OPONENTÓW: Wskaż sformułowania, które przeciwnicy wytną na złośliwe setki, rolki czy memy (tzw. samobóje).
+6. SKRYPTY KOREKCYJNE: Do wytkniętych błędów podaj gotową, bezpieczną ripostę sztabową („Zamiast X -> Mów Y”).
+7. WARSZTAT WYSTĄPIEŃ I EMISJI: Oceń tempo, intonację (unikanie uptalku), pauzy i wypełniacze.
+8. KALIBRACJA OCENY: Skompresuj ocenę punktową 1-10 w stronę środka skali (zazwyczaj 4–7/10 w zależności od skali uchybień; unikaj zawyżania do 8–10 oraz skrajnego 1–2).
+9. FORMAT JĘZYKOWY: Sentence case (tylko pierwsza litera zdania wielka). Odpowiedź formułuj zwięźle, esencjonalnie i z wysoką gęstością faktów.
 
 Zwróć poprawny JSON o schemacie:
 {{
@@ -365,7 +377,10 @@ Zwróć poprawny JSON o schemacie:
   }}
 }}"""
 
-        url = f"{GEMINI_API_URL}?key={self.api_key}"
+        headers = {
+            "x-goog-api-key": self.api_key,
+            "Content-Type": "application/json"
+        }
         payload = {
             "contents": [
                 {
@@ -382,9 +397,10 @@ Zwróć poprawny JSON o schemacie:
         }
 
         async with httpx.AsyncClient(timeout=120.0) as client:
-            resp = await client.post(url, json=payload)
+            resp = await client.post(GEMINI_API_URL, json=payload, headers=headers)
             if resp.status_code != 200:
-                raise RuntimeError(f"Błąd multimodalnej analizy Gemini ({resp.status_code}): {resp.text}")
+                logger.error(f"Błąd analizy audio API ({resp.status_code}): {resp.status_code}")
+                raise RuntimeError(f"Błąd analizy audio API ({resp.status_code})")
             
             data = resp.json()
             try:

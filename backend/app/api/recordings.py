@@ -48,6 +48,7 @@ class RecordingResponse(BaseModel):
     blad: Optional[str] = None
     tryb_biometryczny: bool = True
     zakres_analizy: str = "pelny" # "pelny" (wszystko) | "behawioralny" (tylko zachowanie i stan psychiczny)
+    profile_id: Optional[str] = "profile_main"
     polityk_docelowy: Optional[str] = None
     rola_polityka: Optional[str] = "Badany polityk"
     speaker_docelowy_tag: Optional[str] = None
@@ -64,6 +65,7 @@ class CreateFromUrlRequest(BaseModel):
     data_publikacji: Optional[datetime] = None
     tryb_biometryczny: bool = True
     zakres_analizy: str = "pelny" # "pelny" | "behawioralny"
+    profile_id: Optional[str] = "profile_main"
     polityk_docelowy: Optional[str] = None
     rola_polityka: Optional[str] = "Badany polityk"
 
@@ -73,8 +75,14 @@ class SetTargetSpeakerRequest(BaseModel):
     rola: Optional[str] = None
 
 @router.get("", response_model=List[RecordingResponse])
-async def list_recordings(db: AsyncSession = Depends(get_db)):
-    stmt = select(Recording).options(selectinload(Recording.psychometric_profile)).order_by(desc(Recording.created_at))
+async def list_recordings(
+    profile_id: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(Recording).options(selectinload(Recording.psychometric_profile))
+    if profile_id:
+        stmt = stmt.where(Recording.profile_id == profile_id)
+    stmt = stmt.order_by(desc(Recording.created_at))
     result = await db.execute(stmt)
     return result.scalars().all()
 
@@ -99,6 +107,7 @@ async def create_recording_from_url(payload: CreateFromUrlRequest, db: AsyncSess
         typ_nagrania=payload.typ_nagrania,
         tryb_biometryczny=payload.tryb_biometryczny,
         zakres_analizy=payload.zakres_analizy,
+        profile_id=payload.profile_id or "profile_main",
         polityk_docelowy=payload.polityk_docelowy.strip() if payload.polityk_docelowy else None,
         rola_polityka=payload.rola_polityka.strip() if payload.rola_polityka else "Badany polityk",
         status_przetwarzania="POBIERANIE",
@@ -120,6 +129,7 @@ async def upload_recording_file(
     data_publikacji: Optional[str] = Form(None),
     tryb_biometryczny: bool = Form(True),
     zakres_analizy: str = Form("pelny"),
+    profile_id: Optional[str] = Form("profile_main"),
     polityk_docelowy: Optional[str] = Form(None),
     rola_polityka: Optional[str] = Form("Badany polityk"),
     db: AsyncSession = Depends(get_db)
@@ -139,6 +149,7 @@ async def upload_recording_file(
         typ_nagrania=typ_nagrania,
         tryb_biometryczny=tryb_biometryczny,
         zakres_analizy=zakres_analizy,
+        profile_id=profile_id or "profile_main",
         polityk_docelowy=polityk_docelowy.strip() if polityk_docelowy else None,
         rola_polityka=rola_polityka.strip() if rola_polityka else "Badany polityk",
         status_przetwarzania="PRZETWARZANIE",
@@ -235,7 +246,7 @@ async def download_recording_pdf(recording_id: str, db: AsyncSession = Depends(g
 
     pdf_bytes = pdf_generator.generate(rec)
     safe_name = "".join(c for c in (rec.polityk_docelowy or "raport") if c.isalnum() or c in ("-", "_")).strip() or "raport"
-    filename = f"PROFILER_{safe_name}_{recording_id[:8]}.pdf"
+    filename = f"E-PROFILER_{safe_name}_{recording_id[:8]}.pdf"
 
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
