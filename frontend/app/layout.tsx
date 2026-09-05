@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import "./globals.css";
 import { LegalNotice } from "@/components/LegalNotice";
+import { UserNav } from "@/components/UserNav";
 import { Eye, Shield, Radio, Sparkles } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -71,16 +72,19 @@ export default function RootLayout({
               </nav>
             </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2.5 sm:gap-4">
               {/* Telemetria statusu */}
               <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-slate-900/80 border border-slate-800 rounded text-[11px] font-mono text-slate-300">
                 <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
                 <span>SILNIK ONLINE</span>
               </div>
 
+              {/* Status profilu i przycisk wylogowania */}
+              <UserNav />
+
               <Link
                 href="/recordings/new"
-                className="relative group px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all rounded shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center gap-2"
+                className="relative group px-3.5 sm:px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs uppercase tracking-wider transition-all rounded shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center gap-2"
               >
                 <Eye className="w-3.5 h-3.5" />
                 <span>+ Profiluj wideo</span>

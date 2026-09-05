@@ -12,9 +12,9 @@ export async function POST() {
     maxAge: 0,
   };
 
+  // Wylogowanie sesji i profilu — zachowujemy zapamiętany klucz API w ciasteczku/localStorage!
   response.cookies.set({ ...cookieOptions, name: 'eprofiler_auth' });
   response.cookies.set({ ...cookieOptions, name: 'eprofiler_profile', httpOnly: false });
-  response.cookies.set({ ...cookieOptions, name: 'eprofiler_gemini_key' });
 
   return response;
 }

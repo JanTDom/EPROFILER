@@ -31,7 +31,10 @@ export async function POST(request: Request) {
     // Sprawdzenie hasła dla Profilu 2 (Niezależny z własnym API Gemini)
     else if (
       trimmed === PASSWORD_PROFILE_CUSTOM || 
-      trimmed === 'Rower23Moto'
+      trimmed === 'Rower23Moto' ||
+      trimmed === 'Moto23Rower' ||
+      trimmed.toLowerCase() === 'rower23moto' ||
+      trimmed.toLowerCase() === 'moto23rower'
     ) {
       profileId = 'profile_custom';
       profileName = 'Profil Niezależny';
