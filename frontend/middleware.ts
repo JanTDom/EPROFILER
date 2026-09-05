@@ -22,6 +22,9 @@ export function middleware(request: NextRequest) {
   const authCookie = request.cookies.get('eprofiler_auth');
 
   if (!authCookie || authCookie.value !== 'authorized') {
+    if (pathname.startsWith('/api')) {
+      return NextResponse.json({ detail: 'Wymagana autoryzacja sesji.' }, { status: 401 });
+    }
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('from', pathname);
     return NextResponse.redirect(loginUrl);

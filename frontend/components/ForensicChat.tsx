@@ -109,16 +109,21 @@ export const ForensicChat: React.FC<ForensicChatProps> = ({
         .filter((m) => m.id !== "welcome")
         .map((m) => ({ role: m.role, content: m.content }));
 
-      const res = await fetch(`/api/recordings/${recordingId}/chat`, {
+      const res = await fetch(`/api/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: payloadMessages }),
+        body: JSON.stringify({ recordingId, messages: payloadMessages }),
       });
 
-      const data = await res.json();
+      let data: any;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`Błąd serwera (${res.status}): Nieprawidłowa odpowiedź.`);
+      }
 
       if (!res.ok) {
-        throw new Error(data.detail || `Błąd serwera (${res.status})`);
+        throw new Error(data.detail || data.error || `Błąd serwera (${res.status})`);
       }
 
       const assistantMsg: Message = {
