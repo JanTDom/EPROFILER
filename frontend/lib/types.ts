@@ -186,6 +186,7 @@ export interface PsychometricProfile {
   skutecznosc_argumentacji?: string;
   perswazyjnosc_odbiorcow?: string;
   radzenie_z_adwersarzami?: string;
+  dane_marketingowe?: PoliticalMarketingData;
   surowe_wnioski_ai?: {
     temat_rozmowy?: string;
     marketing_polityczny?: PoliticalMarketingData;

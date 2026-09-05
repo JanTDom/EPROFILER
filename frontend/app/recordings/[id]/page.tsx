@@ -9,6 +9,7 @@ import { ProgressStepper } from "@/components/ProgressStepper";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { LegalNotice } from "@/components/LegalNotice";
 import { DeleteRecordingButton } from "@/components/DeleteRecordingButton";
+import { ForensicChat } from "@/components/ForensicChat";
 import {
   ArrowLeft,
   Clock,
@@ -35,6 +36,7 @@ import {
   Flame,
   Target,
   Compass,
+  Swords,
 } from "lucide-react";
 
 export default function RecordingDetailPage() {
@@ -48,6 +50,15 @@ export default function RecordingDetailPage() {
   const [isSwitchingSpeaker, setIsSwitchingSpeaker] = useState(false);
   const [customPoliticianName, setCustomPoliticianName] = useState("");
   const [switchingError, setSwitchingError] = useState<string | null>(null);
+  const [seekToTimeSec, setSeekToTimeSec] = useState<number | null>(null);
+
+  const handleSeekFromChat = (seconds: number) => {
+    setSeekToTimeSec(seconds);
+    const container = document.getElementById("video-player-container");
+    if (container) {
+      container.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -153,6 +164,16 @@ export default function RecordingDetailPage() {
         </Link>
 
         <div className="flex items-center gap-2.5">
+          {/* Przycisk przejścia do pojedynku 1-na-1 */}
+          <Link
+            href={`/duel?candidateA=${recording.id}`}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/40 px-3 py-1.5 rounded-lg transition-all shadow-sm"
+            title="Przejdź do studia pojedynku 1-na-1 z tym nagraniem"
+          >
+            <Swords className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden sm:inline">Pojedynek 1-na-1</span>
+          </Link>
+
           {/* Przycisk pobierania eleganckiego raportu PDF */}
           <a
             href={getRecordingPdfUrl(recording.id)}
@@ -357,7 +378,7 @@ export default function RecordingDetailPage() {
         {/* Kolumna lewa: Odtwarzacz wideo z trybem slow-motion & Karty prostego języka */}
         <div className="lg:col-span-2 space-y-6">
           {isReady ? (
-            <div>
+            <div id="video-player-container" className="scroll-mt-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
                   <Eye className="w-3.5 h-3.5 text-cyan-400" />
@@ -367,7 +388,7 @@ export default function RecordingDetailPage() {
                   Użyj 0.25x do wykrywania ułamkowych grymasów twarzy
                 </span>
               </div>
-              <VideoPlayer recordingId={recording.id} />
+              <VideoPlayer recordingId={recording.id} seekToTimeSec={seekToTimeSec} />
             </div>
           ) : recording.status_przetwarzania === "BLAD" ? (
             <div className="aspect-video bg-studio-card/95 border border-red-500/50 rounded-2xl flex flex-col items-center justify-center text-center p-6 text-slate-300 shadow-2xl backdrop-blur-xl">
@@ -403,6 +424,15 @@ export default function RecordingDetailPage() {
                 <RefreshCw className="w-3 h-3" /> Wznów jeśli proces uległ przerwaniu
               </button>
             </div>
+          )}
+
+          {/* SZTABOWY CZAT AI Z NAGRANIEM (FORENSIC VIDEO CHAT) */}
+          {recording.psychometric_profile && (
+            <ForensicChat
+              recordingId={recording.id}
+              politicianName={targetName}
+              onSeek={handleSeekFromChat}
+            />
           )}
 
           {/* BILANS WIZERUNKOWY I MARKETING POLITYCZNY */}

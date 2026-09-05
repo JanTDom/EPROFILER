@@ -64,6 +64,12 @@ export default function RootLayout({
                   <span className="text-slate-600">//</span> REPOZYTORIUM
                 </Link>
                 <Link
+                  href="/duel"
+                  className="hover:text-amber-400 transition-colors flex items-center gap-1.5 text-amber-300/90 font-bold"
+                >
+                  <span className="text-slate-600">//</span> POJEDYNEK 1-NA-1
+                </Link>
+                <Link
                   href="/recordings/new"
                   className="hover:text-cyan-400 transition-colors flex items-center gap-1.5"
                 >
