@@ -39,27 +39,27 @@ export const UserNav: React.FC = () => {
   const isCustom = profile === "profile_custom";
 
   return (
-    <div className="flex items-center gap-2.5 font-mono text-xs">
+    <div className="flex items-center gap-2 font-mono text-xs whitespace-nowrap flex-shrink-0">
       {/* Wskaźnik aktywnego profilu */}
       <div
-        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all ${
+        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all whitespace-nowrap flex-shrink-0 ${
           isCustom
             ? "bg-purple-950/60 border-purple-700/60 text-purple-300"
             : "bg-emerald-950/60 border-emerald-700/60 text-emerald-300"
         }`}
         title={
           isCustom
-            ? "Zalogowano do Profilu Niezależnego (własny klucz API)"
-            : "Zalogowano do Profilu Głównego"
+            ? "Zalogowano do profilu niezależnego (własny klucz API)"
+            : "Zalogowano do profilu głównego"
         }
       >
         <span
           className={`w-2 h-2 rounded-full ${
             isCustom ? "bg-purple-400" : "bg-emerald-400"
-          } animate-pulse`}
+          } animate-pulse flex-shrink-0`}
         />
-        <span className="font-bold text-[11px] hidden md:inline">
-          {isCustom ? "PROFIL NIEZALEŻNY" : "PROFIL GŁÓWNY"}
+        <span className="font-bold text-[11px] hidden md:inline whitespace-nowrap">
+          {isCustom ? "Profil niezależny" : "Profil główny"}
         </span>
       </div>
 
@@ -68,15 +68,15 @@ export const UserNav: React.FC = () => {
         type="button"
         onClick={handleLogout}
         disabled={loggingOut}
-        className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900/90 hover:bg-red-950/50 text-slate-300 hover:text-red-300 border border-slate-700/80 hover:border-red-500/50 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+        className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-900/90 hover:bg-red-950/50 text-slate-300 hover:text-red-300 border border-slate-700/80 hover:border-red-500/50 rounded-lg text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap flex-shrink-0"
         title="Wyloguj się z bieżącego profilu"
       >
         {loggingOut ? (
           <span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
         ) : (
-          <LogOut className="w-3.5 h-3.5" />
+          <LogOut className="w-3.5 h-3.5 flex-shrink-0" />
         )}
-        <span className="text-[11px]">Wyloguj</span>
+        <span className="text-[11px] whitespace-nowrap">Wyloguj</span>
       </button>
     </div>
   );
