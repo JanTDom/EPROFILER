@@ -58,7 +58,7 @@ export const UserNav: React.FC = () => {
             isCustom ? "bg-purple-400" : "bg-emerald-400"
           } animate-pulse flex-shrink-0`}
         />
-        <span className="font-bold text-[11px] hidden md:inline whitespace-nowrap">
+        <span className="font-bold text-[11px] hidden lg:inline whitespace-nowrap">
           {isCustom ? "Profil niezależny" : "Profil główny"}
         </span>
       </div>

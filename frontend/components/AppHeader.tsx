@@ -81,7 +81,7 @@ export const AppHeader: React.FC = () => {
             className="relative group px-3.5 sm:px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-xs tracking-wider transition-all rounded shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center gap-2 whitespace-nowrap flex-shrink-0"
           >
             <Eye className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="whitespace-nowrap">+ Nowa analiza</span>
+            <span className="whitespace-nowrap hidden sm:inline">+ Nowa analiza</span>
           </Link>
         </div>
       </div>
