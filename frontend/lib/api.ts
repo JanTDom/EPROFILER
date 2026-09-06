@@ -486,5 +486,5 @@ export function getVideoUrl(recordingId: string): string {
 }
 
 export function getRecordingPdfUrl(recordingId: string): string {
-  return `${API_BASE}/api/recordings/${recordingId}/pdf`;
+  return `/api/recordings/${recordingId}/pdf`;
 }
