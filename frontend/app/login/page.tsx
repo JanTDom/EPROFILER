@@ -406,7 +406,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-8">
+    <div className="flex-1 min-h-[85vh] flex flex-col items-center justify-center px-4 py-8">
       <div className="relative w-full max-w-xl flex flex-col items-center">
         <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
