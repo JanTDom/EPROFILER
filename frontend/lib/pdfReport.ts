@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, PDFFont, PDFPage } from "pdf-lib";
+import { PDFDocument, rgb, PDFFont, PDFPage, Color } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import path from "path";
 import fs from "fs";
@@ -19,21 +19,46 @@ function resolveFontPath(fontFilename: string): string {
 
 function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: number): string[] {
   if (!text) return [];
-  const words = text.split(/\s+/);
-  const lines: string[] = [];
-  let currentLine = "";
+  const paragraphs = text.split("\n");
+  const allLines: string[] = [];
 
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    if (font.widthOfTextAtSize(testLine, fontSize) <= maxWidth) {
-      currentLine = testLine;
-    } else {
-      if (currentLine) lines.push(currentLine);
-      currentLine = word;
+  for (const para of paragraphs) {
+    const trimmed = para.trim();
+    if (!trimmed) continue;
+    const words = trimmed.split(/\s+/);
+    let currentLine = "";
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      if (font.widthOfTextAtSize(testLine, fontSize) <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) allLines.push(currentLine);
+        currentLine = word;
+      }
     }
+    if (currentLine) allLines.push(currentLine);
   }
-  if (currentLine) lines.push(currentLine);
-  return lines;
+  return allLines;
+}
+
+interface AtomicCardOptions {
+  badgeLabel: string;
+  badgeBg: Color;
+  badgeFg: Color;
+  accentColor: Color;
+  bgCard: Color;
+  borderCard: Color;
+  title: string;
+  quote?: string | null;
+  description?: string | null;
+  extraBox?: {
+    label: string;
+    text: string;
+    bgColor: Color;
+    textColor: Color;
+    accentBar?: Color;
+  } | null;
 }
 
 export async function generateRecordingPdf(recording: any): Promise<Uint8Array> {
@@ -44,12 +69,14 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
   const rawAi = profile?.surowe_wnioski_ai || {};
   const mkt = rawAi.marketing_polityczny || {};
   const wnioski = rawAi.wnioski || {};
+  const psychometrics = rawAi.profil_psychometryczny_wielka_piatka || {};
 
   const targetName = recording.polityk_docelowy || "Główny badany polityk";
-  const roleName = recording.rola_polityka || "Badany polityk";
+  const roleName = recording.rola_polityka || "Badany gość";
   const durationMin = recording.czas_trwania_sek
     ? Math.round(recording.czas_trwania_sek / 60)
     : null;
+  const isAudio = recording.format_materialu === "audio";
 
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
@@ -66,20 +93,48 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
   const pageWidth = 595.28;
   const pageHeight = 841.89;
   const margin = 36;
+  const bottomMargin = 50;
   const contentWidth = pageWidth - margin * 2;
 
   let page = doc.addPage([pageWidth, pageHeight]);
   let y = pageHeight - margin;
 
-  const checkPageBreak = (neededHeight: number): void => {
-    if (y - neededHeight < 55) {
-      page = doc.addPage([pageWidth, pageHeight]);
-      y = pageHeight - margin;
-    }
+  // Funkcja tworzenia nowej strony z eleganckim nagłówkiem bieżącym (Running header)
+  const addReportPage = (): PDFPage => {
+    const newPage = doc.addPage([pageWidth, pageHeight]);
+
+    // Bieżący nagłówek na stronach 2+
+    newPage.drawText("E-PROFILER • Raport audytu i wywiadu behawioralnego", {
+      x: margin,
+      y: pageHeight - 24,
+      size: 7,
+      font: fontB,
+      color: rgb(0.35, 0.42, 0.52),
+    });
+
+    const headerRight = `Badany: ${targetName}`;
+    const hrWidth = fontR.widthOfTextAtSize(headerRight, 7);
+    newPage.drawText(headerRight, {
+      x: pageWidth - margin - hrWidth,
+      y: pageHeight - 24,
+      size: 7,
+      font: fontR,
+      color: rgb(0.45, 0.52, 0.62),
+    });
+
+    newPage.drawLine({
+      start: { x: margin, y: pageHeight - 30 },
+      end: { x: pageWidth - margin, y: pageHeight - 30 },
+      thickness: 0.5,
+      color: rgb(0.88, 0.91, 0.94),
+    });
+
+    y = pageHeight - 48;
+    return newPage;
   };
 
-  // 1. BANER NAGŁÓWKA (Masthead)
-  const headerHeight = 82;
+  // 1. BANER NAGŁÓWKA NA STRONIE 1 (Executive Masthead)
+  const headerHeight = 84;
   page.drawRectangle({
     x: margin,
     y: y - headerHeight,
@@ -99,19 +154,19 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
   page.drawText("Raport audytu wystąpienia i marketingu politycznego", {
     x: margin + 14,
     y: y - 38,
-    size: 13.5,
+    size: 13,
     font: fontB,
     color: rgb(1, 1, 1),
   });
 
   page.drawText(
-    `Osoba diagnozowana: ${targetName} • Rola: ${roleName}${durationMin ? ` • Czas: ${durationMin} min` : ""}`,
+    `Osoba diagnozowana: ${targetName} • Rola: ${roleName}${durationMin ? ` • Czas: ${durationMin} min` : ""} • Format: ${isAudio ? "Ścieżka dźwiękowa (audio)" : "Materiał wideo (FACS)"}`,
     {
       x: margin + 14,
       y: y - 56,
-      size: 8.5,
+      size: 8,
       font: fontR,
-      color: rgb(0.58, 0.64, 0.72),
+      color: rgb(0.68, 0.74, 0.82),
     }
   );
 
@@ -122,18 +177,18 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
       y: y - 70,
       size: 7.5,
       font: fontR,
-      color: rgb(0.39, 0.45, 0.55),
+      color: rgb(0.45, 0.52, 0.62),
     });
   }
 
   y -= headerHeight + 14;
 
   // 2. KARTA WERDYKTU I OCENY SZTABOWEJ
-  const score = mkt.ocena_punktowa_1_10 ?? 6;
+  const score = typeof mkt.ocena_punktowa_1_10 === "number" ? mkt.ocena_punktowa_1_10 : 6;
   const verdict = mkt.werdykt || "Występ poprawny z zastrzeżeniami";
   const justification = mkt.uzasadnienie_werdyktu || "";
   const justLines = wrapText(justification, fontR, 8.5, contentWidth - 140);
-  const verdictHeight = Math.max(70, 36 + justLines.length * 11);
+  const verdictHeight = Math.max(72, 38 + justLines.length * 11.5);
 
   page.drawRectangle({
     x: margin,
@@ -141,394 +196,626 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     width: contentWidth,
     height: verdictHeight,
     color: rgb(0.97, 0.98, 0.99),
-    borderColor: rgb(0.88, 0.91, 0.94),
+    borderColor: rgb(0.86, 0.89, 0.94),
     borderWidth: 1,
   });
 
+  // Lewy akcent werdyktu
+  const scoreColor =
+    score >= 7
+      ? rgb(0.06, 0.58, 0.35)
+      : score >= 5
+      ? rgb(0.85, 0.45, 0.08)
+      : rgb(0.82, 0.12, 0.23);
+
+  page.drawRectangle({
+    x: margin,
+    y: y - verdictHeight,
+    width: 4,
+    height: verdictHeight,
+    color: scoreColor,
+  });
+
+  // Blok punktowy
   page.drawText(`${score}/10`, {
-    x: margin + 16,
+    x: margin + 18,
     y: y - 36,
-    size: 26,
+    size: 24,
     font: fontB,
     color: rgb(0.06, 0.09, 0.16),
   });
 
   page.drawText("OCENA SZTABOWA", {
-    x: margin + 16,
+    x: margin + 18,
     y: y - 52,
-    size: 7,
+    size: 6.5,
     font: fontB,
-    color: rgb(0.39, 0.45, 0.55),
+    color: rgb(0.42, 0.48, 0.58),
   });
 
   page.drawText(verdict, {
-    x: margin + 110,
+    x: margin + 115,
     y: y - 24,
     size: 10.5,
     font: fontB,
-    color: rgb(0.03, 0.57, 0.7),
+    color: scoreColor,
   });
 
   let curJY = y - 38;
   for (const line of justLines) {
     page.drawText(line, {
-      x: margin + 110,
+      x: margin + 115,
       y: curJY,
       size: 8.5,
       font: fontR,
-      color: rgb(0.2, 0.25, 0.33),
+      color: rgb(0.18, 0.23, 0.31),
     });
-    curJY -= 11;
+    curJY -= 11.5;
   }
 
-  y -= verdictHeight + 16;
+  y -= verdictHeight + 14;
 
-  // Funkcja pomocnicza do sekcji
-  const renderSectionHeading = (title: string, color = rgb(0.06, 0.09, 0.16)) => {
-    checkPageBreak(30);
-    page.drawText(title, {
+  // Profil psychometryczny Big Five (kompaktowy pasek wskaźników)
+  if (psychometrics.otwartosc || psychometrics.ekstrawersja) {
+    const barHeight = 32;
+    page.drawRectangle({
       x: margin,
-      y: y - 10,
+      y: y - barHeight,
+      width: contentWidth,
+      height: barHeight,
+      color: rgb(0.94, 0.96, 0.98),
+      borderColor: rgb(0.86, 0.89, 0.93),
+      borderWidth: 0.5,
+    });
+
+    const traits = [
+      { label: "Otwartość", val: psychometrics.otwartosc ?? 50 },
+      { label: "Sumienność", val: psychometrics.sumiennosc ?? 50 },
+      { label: "Ekstrawersja", val: psychometrics.ekstrawersja ?? 50 },
+      { label: "Ugodowość", val: psychometrics.ugodowosc ?? 50 },
+      { label: "Neurotyczność", val: psychometrics.neurotyzm ?? 50 },
+    ];
+
+    const colWidth = contentWidth / traits.length;
+    traits.forEach((t, i) => {
+      const colX = margin + i * colWidth + 8;
+      page.drawText(t.label, {
+        x: colX,
+        y: y - 13,
+        size: 7,
+        font: fontR,
+        color: rgb(0.38, 0.44, 0.54),
+      });
+      page.drawText(`${t.val}%`, {
+        x: colX,
+        y: y - 25,
+        size: 9,
+        font: fontB,
+        color: rgb(0.08, 0.12, 0.2),
+      });
+    });
+
+    y -= barHeight + 14;
+  }
+
+  // Funkcja nagłówka sekcji z OCHRONĄ PRZED SIEROTAMI (Keep with next)
+  const renderSectionHeading = (
+    title: string,
+    minFirstContentHeight = 70,
+    accentColor = rgb(0.06, 0.09, 0.16)
+  ) => {
+    const needed = 36 + minFirstContentHeight;
+    if (y - needed < bottomMargin) {
+      page = addReportPage();
+    }
+
+    page.drawRectangle({
+      x: margin,
+      y: y - 16,
+      width: 3.5,
+      height: 14,
+      color: accentColor,
+    });
+
+    page.drawText(title, {
+      x: margin + 10,
+      y: y - 14,
       size: 11,
       font: fontB,
-      color,
+      color: rgb(0.06, 0.09, 0.16),
     });
+
     page.drawLine({
-      start: { x: margin, y: y - 14 },
-      end: { x: margin + contentWidth, y: y - 14 },
+      start: { x: margin, y: y - 22 },
+      end: { x: margin + contentWidth, y: y - 22 },
       thickness: 0.5,
       color: rgb(0.88, 0.91, 0.94),
     });
-    y -= 24;
+
+    y -= 32;
   };
 
-  // 3. SYNTEZA BEHAWIORALNA
-  if (
-    wnioski.nastroje_i_emocje ||
-    wnioski.glowne_uniki_i_taktyka ||
-    wnioski.czule_punkty_stres ||
-    wnioski.spojnosc_mowy_ze_slowami ||
-    wnioski.sila_argumentacji ||
-    wnioski.czy_odbiorcy_to_kupia ||
-    wnioski.pojedynek_z_adwersarzami
-  ) {
-    renderSectionHeading("Diagnoza psychologiczna i postawa komunikacyjna");
+  // GŁÓWNY SILNIK ATOMOWYCH KART RAPORTU (Atomic Card Engine)
+  const renderAtomicCard = (opts: AtomicCardOptions) => {
+    const paddingX = 14;
+    const paddingY = 10;
+    const usableWidth = contentWidth - paddingX * 2;
 
-    const renderInsight = (label: string, text: string) => {
-      if (!text) return;
-      const lines = wrapText(text, fontR, 8.5, contentWidth - 16);
-      checkPageBreak(20 + lines.length * 11);
+    const badgeTextWidth = fontB.widthOfTextAtSize(opts.badgeLabel, 6.5);
+    const badgePillWidth = badgeTextWidth + 12;
 
-      page.drawText(label, {
-        x: margin + 4,
-        y: y - 8,
-        size: 8,
+    const titleLines = wrapText(opts.title, fontB, 9.5, usableWidth);
+    const quoteLines = opts.quote
+      ? wrapText(`„${opts.quote}”`, fontR, 8, usableWidth - 16)
+      : [];
+    const quoteBoxHeight = quoteLines.length > 0 ? 12 + quoteLines.length * 11 : 0;
+
+    const descLines = opts.description
+      ? wrapText(opts.description, fontR, 8.5, usableWidth)
+      : [];
+    const descHeight = descLines.length * 12;
+
+    const extraLines = opts.extraBox
+      ? wrapText(`${opts.extraBox.label}: ${opts.extraBox.text}`, fontB, 8, usableWidth - 16)
+      : [];
+    const extraBoxHeight = extraLines.length > 0 ? 12 + extraLines.length * 11 : 0;
+
+    // Obliczenie całkowitej wysokości karty
+    let cardHeight = paddingY * 2;
+    cardHeight += 13; // wysokość badge'a
+    cardHeight += 5; // odstęp pod badgem
+    cardHeight += titleLines.length * 13; // tytuł
+    if (quoteBoxHeight > 0) cardHeight += quoteBoxHeight + 8;
+    if (descHeight > 0) cardHeight += descHeight + 6;
+    if (extraBoxHeight > 0) cardHeight += extraBoxHeight + 8;
+
+    // Sprawdzenie podziału strony przed narysowaniem karty
+    if (y - cardHeight < bottomMargin) {
+      page = addReportPage();
+    }
+
+    // Tło karty
+    page.drawRectangle({
+      x: margin,
+      y: y - cardHeight,
+      width: contentWidth,
+      height: cardHeight,
+      color: opts.bgCard,
+      borderColor: opts.borderCard,
+      borderWidth: 0.5,
+    });
+
+    // Lewy kolorowy pasek akcentujący
+    page.drawRectangle({
+      x: margin,
+      y: y - cardHeight,
+      width: 3.5,
+      height: cardHeight,
+      color: opts.accentColor,
+    });
+
+    let curY = y - paddingY;
+
+    // Badge pill
+    page.drawRectangle({
+      x: margin + paddingX,
+      y: curY - 13,
+      width: badgePillWidth,
+      height: 13,
+      color: opts.badgeBg,
+    });
+
+    page.drawText(opts.badgeLabel, {
+      x: margin + paddingX + 6,
+      y: curY - 9.5,
+      size: 6.5,
+      font: fontB,
+      color: opts.badgeFg,
+    });
+
+    curY -= 13 + 6;
+
+    // Tytuł w sentence case
+    for (const line of titleLines) {
+      page.drawText(line, {
+        x: margin + paddingX,
+        y: curY,
+        size: 9.5,
         font: fontB,
-        color: rgb(0.28, 0.33, 0.41),
+        color: rgb(0.08, 0.12, 0.2),
       });
-      y -= 12;
+      curY -= 13;
+    }
 
-      for (const l of lines) {
-        page.drawText(l, {
-          x: margin + 4,
-          y: y - 8,
+    // Pudełko cytatu
+    if (quoteLines.length > 0) {
+      curY -= 4;
+      page.drawRectangle({
+        x: margin + paddingX,
+        y: curY - quoteBoxHeight + 2,
+        width: usableWidth,
+        height: quoteBoxHeight,
+        color: rgb(0.93, 0.95, 0.97),
+      });
+
+      page.drawRectangle({
+        x: margin + paddingX,
+        y: curY - quoteBoxHeight + 2,
+        width: 2,
+        height: quoteBoxHeight,
+        color: opts.accentColor,
+      });
+
+      let qY = curY - 9;
+      for (const ql of quoteLines) {
+        page.drawText(ql, {
+          x: margin + paddingX + 8,
+          y: qY,
+          size: 8,
+          font: fontR,
+          color: rgb(0.25, 0.3, 0.38),
+        });
+        qY -= 11;
+      }
+      curY -= quoteBoxHeight + 6;
+    }
+
+    // Opis / dekonstrukcja
+    if (descLines.length > 0) {
+      for (const dl of descLines) {
+        page.drawText(dl, {
+          x: margin + paddingX,
+          y: curY,
           size: 8.5,
           font: fontR,
-          color: rgb(0.12, 0.16, 0.23),
+          color: rgb(0.18, 0.23, 0.31),
         });
-        y -= 11;
+        curY -= 12;
       }
-      y -= 4;
-    };
+      curY -= 4;
+    }
 
-    renderInsight("Nastrój i stabilność emocjonalna:", wnioski.nastroje_i_emocje);
-    renderInsight("Strategia rozmowy i taktyka odpowiedzi:", wnioski.glowne_uniki_i_taktyka);
-    renderInsight("Czułe punkty i momenty stresu:", wnioski.czule_punkty_stres);
-    renderInsight("Spójność tonu głosu z treścią wypowiedzi:", wnioski.spojnosc_mowy_ze_slowami);
-    renderInsight("Siła i logika argumentacji:", wnioski.sila_argumentacji);
-    renderInsight("Wiarygodność w oczach odbiorców:", wnioski.czy_odbiorcy_to_kupia);
-    renderInsight("Pojedynek z adwersarzami i kontrola nad studiem:", wnioski.pojedynek_z_adwersarzami);
-    y -= 6;
+    // Blok akcji / riposty / zalecenia
+    if (extraLines.length > 0 && opts.extraBox) {
+      page.drawRectangle({
+        x: margin + paddingX,
+        y: curY - extraBoxHeight + 2,
+        width: usableWidth,
+        height: extraBoxHeight,
+        color: opts.extraBox.bgColor,
+      });
+
+      if (opts.extraBox.accentBar) {
+        page.drawRectangle({
+          x: margin + paddingX,
+          y: curY - extraBoxHeight + 2,
+          width: 2,
+          height: extraBoxHeight,
+          color: opts.extraBox.accentBar,
+        });
+      }
+
+      let eY = curY - 9;
+      for (const el of extraLines) {
+        page.drawText(el, {
+          x: margin + paddingX + 8,
+          y: eY,
+          size: 8,
+          font: fontB,
+          color: opts.extraBox.textColor,
+        });
+        eY -= 11;
+      }
+      curY -= extraBoxHeight + 4;
+    }
+
+    // Odstęp między kartami
+    y -= cardHeight + 10;
+  };
+
+  // 3. SYNTEZA BEHAWIORALNA I POSTAWA KOMUNIKACYJNA
+  const wnioskiList = [
+    { label: "Nastrój i stabilność emocjonalna", text: wnioski.nastroje_i_emocje },
+    { label: "Strategia rozmowy i taktyka odpowiedzi", text: wnioski.glowne_uniki_i_taktyka },
+    { label: "Czułe punkty i momenty stresu", text: wnioski.czule_punkty_stres },
+    { label: "Spójność tonu głosu z treścią wypowiedzi", text: wnioski.spojnosc_mowy_ze_slowami },
+    { label: "Siła i logika argumentacji", text: wnioski.sila_argumentacji },
+    { label: "Wiarygodność w oczach odbiorców", text: wnioski.czy_odbiorcy_to_kupia },
+    { label: "Pojedynek z adwersarzami i kontrola nad studiem", text: wnioski.pojedynek_z_adwersarzami },
+  ].filter((w) => Boolean(w.text));
+
+  if (wnioskiList.length > 0) {
+    renderSectionHeading("Diagnoza psychologiczna i postawa komunikacyjna", 90, rgb(0.1, 0.4, 0.65));
+
+    for (const item of wnioskiList) {
+      renderAtomicCard({
+        badgeLabel: "DIAGNOZA",
+        badgeBg: rgb(0.85, 0.91, 0.96),
+        badgeFg: rgb(0.08, 0.35, 0.58),
+        accentColor: rgb(0.12, 0.45, 0.7),
+        bgCard: rgb(0.98, 0.99, 1.0),
+        borderCard: rgb(0.88, 0.92, 0.96),
+        title: item.label,
+        description: item.text,
+      });
+    }
   }
 
-  // 4. GŁÓWNE ATUTY
+  // 4. MOCNE STRONY I ATUTY WIZERUNKOWE (Plusy)
   const plusy = mkt.glowne_plusy || [];
   if (plusy.length > 0) {
-    renderSectionHeading("Mocne strony i atuty wizerunkowe", rgb(0.08, 0.5, 0.24));
+    renderSectionHeading("Mocne strony i atuty wizerunkowe", 90, rgb(0.06, 0.55, 0.32));
 
-    for (const plus of plusy) {
-      const titleLines = wrapText(`✓ ${plus.nazwa_atutu || "Atut"}`, fontB, 9, contentWidth - 10);
-      const quoteLines = plus.cytat_lub_moment ? wrapText(`Dowód: „${plus.cytat_lub_moment}”`, fontR, 8, contentWidth - 20) : [];
-      const descLines = plus.dlaczego_to_plus ? wrapText(plus.dlaczego_to_plus, fontR, 8.5, contentWidth - 20) : [];
-
-      const totalH = (titleLines.length + quoteLines.length + descLines.length) * 11 + 10;
-      checkPageBreak(totalH);
-
-      for (const l of titleLines) {
-        page.drawText(l, { x: margin + 4, y: y - 8, size: 9, font: fontB, color: rgb(0.08, 0.5, 0.24) });
-        y -= 11;
-      }
-      for (const l of quoteLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8, font: fontR, color: rgb(0.28, 0.33, 0.41) });
-        y -= 10;
-      }
-      for (const l of descLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8.5, font: fontR, color: rgb(0.12, 0.16, 0.23) });
-        y -= 11;
-      }
-      y -= 4;
-    }
-    y -= 6;
+    plusy.forEach((plus: any, idx: number) => {
+      renderAtomicCard({
+        badgeLabel: `ATUT #${idx + 1}`,
+        badgeBg: rgb(0.86, 0.95, 0.89),
+        badgeFg: rgb(0.06, 0.48, 0.25),
+        accentColor: rgb(0.08, 0.58, 0.32),
+        bgCard: rgb(0.98, 0.99, 0.98),
+        borderCard: rgb(0.86, 0.93, 0.88),
+        title: plus.nazwa_atutu || plus.tytul || `Atut wizerunkowy #${idx + 1}`,
+        quote: plus.cytat_lub_moment || plus.cytat,
+        description: plus.dlaczego_to_plus || plus.wyjasnienie,
+      });
+    });
   }
 
-  // 5. POPEŁNIONE BŁĘDY I MINUSY
+  // 5. BŁĘDY, SŁABOŚCI I DEKOMPOZYCJA (Minusy)
   const minusy = mkt.popelnione_bledy_i_minusy || [];
   if (minusy.length > 0) {
-    renderSectionHeading("Błędy, słabości i chwile dekompozycji", rgb(0.75, 0.07, 0.24));
+    renderSectionHeading("Błędy, słabości i chwile dekompozycji", 90, rgb(0.82, 0.12, 0.23));
 
-    for (const min of minusy) {
-      const titleLines = wrapText(`✗ ${min.nazwa_bledu || "Błąd"}`, fontB, 9, contentWidth - 10);
-      const quoteLines = min.cytat_lub_moment ? wrapText(`Moment / cytat: „${min.cytat_lub_moment}”`, fontR, 8, contentWidth - 20) : [];
-      const descLines = min.dlaczego_to_minus ? wrapText(min.dlaczego_to_minus, fontR, 8.5, contentWidth - 20) : [];
-
-      const totalH = (titleLines.length + quoteLines.length + descLines.length) * 11 + 10;
-      checkPageBreak(totalH);
-
-      for (const l of titleLines) {
-        page.drawText(l, { x: margin + 4, y: y - 8, size: 9, font: fontB, color: rgb(0.75, 0.07, 0.24) });
-        y -= 11;
-      }
-      for (const l of quoteLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8, font: fontR, color: rgb(0.28, 0.33, 0.41) });
-        y -= 10;
-      }
-      for (const l of descLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8.5, font: fontR, color: rgb(0.12, 0.16, 0.23) });
-        y -= 11;
-      }
-      y -= 4;
-    }
-    y -= 6;
+    minusy.forEach((min: any, idx: number) => {
+      renderAtomicCard({
+        badgeLabel: `BŁĄD #${idx + 1}`,
+        badgeBg: rgb(0.97, 0.88, 0.89),
+        badgeFg: rgb(0.72, 0.1, 0.18),
+        accentColor: rgb(0.82, 0.12, 0.23),
+        bgCard: rgb(0.99, 0.97, 0.97),
+        borderCard: rgb(0.95, 0.86, 0.88),
+        title: min.nazwa_bledu || min.tytul || `Błąd wizerunkowy #${idx + 1}`,
+        quote: min.cytat_lub_moment || min.cytat,
+        description: min.dlaczego_to_minus || min.wyjasnienie,
+      });
+    });
   }
 
-  // 6. NIEPOŻĄDANE EMOCJE I MOWA CIAŁA / GŁOS
+  // 6. WYCIEKI EMOCJONALNE, MOWA CIAŁA I TON GŁOSU
   const emocje = mkt.niepozadane_emocje_i_mowa_ciala || [];
   if (emocje.length > 0) {
-    renderSectionHeading("Wycieki emocjonalne, mowa ciała i ton głosu", rgb(0.7, 0.33, 0.04));
+    renderSectionHeading("Wycieki emocjonalne, mowa ciała i ton głosu", 90, rgb(0.85, 0.45, 0.08));
 
-    for (const emo of emocje) {
-      const titleLines = wrapText(`⚠ ${emo.reakcja_lub_emocja || "Wyciek emocjonalny"}`, fontB, 9, contentWidth - 10);
-      const quoteLines = emo.cytat_lub_moment ? wrapText(`Moment: „${emo.cytat_lub_moment}”`, fontR, 8, contentWidth - 20) : [];
-      const descLines = emo.dlaczego_to_szkodliwe ? wrapText(`Wpływ: ${emo.dlaczego_to_szkodliwe}`, fontR, 8.5, contentWidth - 20) : [];
-      const adviceLines = emo.zalecenie_sztabowe ? wrapText(`Zalecenie: ${emo.zalecenie_sztabowe}`, fontB, 8, contentWidth - 20) : [];
-
-      const totalH = (titleLines.length + quoteLines.length + descLines.length + adviceLines.length) * 11 + 10;
-      checkPageBreak(totalH);
-
-      for (const l of titleLines) {
-        page.drawText(l, { x: margin + 4, y: y - 8, size: 9, font: fontB, color: rgb(0.7, 0.33, 0.04) });
-        y -= 11;
-      }
-      for (const l of quoteLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8, font: fontR, color: rgb(0.28, 0.33, 0.41) });
-        y -= 10;
-      }
-      for (const l of descLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8.5, font: fontR, color: rgb(0.12, 0.16, 0.23) });
-        y -= 11;
-      }
-      for (const l of adviceLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8, font: fontB, color: rgb(0.01, 0.41, 0.63) });
-        y -= 10;
-      }
-      y -= 4;
-    }
-    y -= 6;
+    emocje.forEach((emo: any, idx: number) => {
+      renderAtomicCard({
+        badgeLabel: `WYCIEK #${idx + 1}`,
+        badgeBg: rgb(0.98, 0.91, 0.84),
+        badgeFg: rgb(0.75, 0.38, 0.06),
+        accentColor: rgb(0.85, 0.45, 0.08),
+        bgCard: rgb(0.99, 0.98, 0.96),
+        borderCard: rgb(0.95, 0.89, 0.83),
+        title: emo.reakcja_lub_emocja || `Wyciek emocjonalny #${idx + 1}`,
+        quote: emo.cytat_lub_moment,
+        description: emo.dlaczego_to_szkodliwe,
+        extraBox: emo.zalecenie_sztabowe
+          ? {
+              label: "Zalecenie sztabowe",
+              text: emo.zalecenie_sztabowe,
+              bgColor: rgb(0.93, 0.96, 0.98),
+              textColor: rgb(0.08, 0.35, 0.58),
+              accentBar: rgb(0.12, 0.48, 0.75),
+            }
+          : null,
+      });
+    });
   }
 
-  // 7. NIELOGICZNOŚCI I LUKI ARGUMENTACYJNE
+  // 7. NIELOGICZNOŚCI, LUKI ARGUMENTACYJNE I MANIPULACJE
   const luki = mkt.nielogicznosci_i_luki_argumentacyjne || [];
   if (luki.length > 0) {
-    renderSectionHeading("Nielogiczności, luki argumentacyjne i manipulacje", rgb(0.55, 0.15, 0.6));
+    renderSectionHeading("Nielogiczności, luki argumentacyjne i manipulacje", 90, rgb(0.55, 0.2, 0.72));
 
-    for (const luka of luki) {
-      const titleLines = wrapText(`§ ${luka.luka_lub_sprzecznosc || "Błąd logiczny"}`, fontB, 9, contentWidth - 10);
-      const quoteLines = luka.cytat_lub_moment ? wrapText(`Fragment: „${luka.cytat_lub_moment}”`, fontR, 8, contentWidth - 20) : [];
-      const diagLines = luka.diagnoza_logiczna ? wrapText(`Diagnoza: ${luka.diagnoza_logiczna}`, fontR, 8.5, contentWidth - 20) : [];
-      const riskLines = luka.ryzyko_kontrataku ? wrapText(`Ryzyko kontrataku: ${luka.ryzyko_kontrataku}`, fontB, 8, contentWidth - 20) : [];
-
-      const totalH = (titleLines.length + quoteLines.length + diagLines.length + riskLines.length) * 11 + 10;
-      checkPageBreak(totalH);
-
-      for (const l of titleLines) {
-        page.drawText(l, { x: margin + 4, y: y - 8, size: 9, font: fontB, color: rgb(0.55, 0.15, 0.6) });
-        y -= 11;
-      }
-      for (const l of quoteLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8, font: fontR, color: rgb(0.28, 0.33, 0.41) });
-        y -= 10;
-      }
-      for (const l of diagLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8.5, font: fontR, color: rgb(0.12, 0.16, 0.23) });
-        y -= 11;
-      }
-      for (const l of riskLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8, font: fontB, color: rgb(0.75, 0.07, 0.24) });
-        y -= 10;
-      }
-      y -= 4;
-    }
-    y -= 6;
+    luki.forEach((luka: any, idx: number) => {
+      renderAtomicCard({
+        badgeLabel: `LUKA LOGICZNA #${idx + 1}`,
+        badgeBg: rgb(0.94, 0.88, 0.97),
+        badgeFg: rgb(0.48, 0.15, 0.65),
+        accentColor: rgb(0.55, 0.2, 0.72),
+        bgCard: rgb(0.99, 0.98, 1.0),
+        borderCard: rgb(0.92, 0.86, 0.95),
+        title: luka.luka_lub_sprzecznosc || `Błąd logiczny #${idx + 1}`,
+        quote: luka.cytat_lub_moment,
+        description: luka.diagnoza_logiczna,
+        extraBox: luka.ryzyko_kontrataku
+          ? {
+              label: "Ryzyko kontrataku",
+              text: luka.ryzyko_kontrataku,
+              bgColor: rgb(0.98, 0.9, 0.92),
+              textColor: rgb(0.72, 0.1, 0.18),
+              accentBar: rgb(0.82, 0.12, 0.23),
+            }
+          : null,
+      });
+    });
   }
 
-  // 8. AMUNICJA DLA OPONENTÓW ('SAMOBÓJE')
+  // 8. POWIERZCHNIA ATAKU — AMUNICJA DLA OPONENTÓW ('SAMOBÓJE')
   const amunicja = mkt.amunicja_dla_oponentow || [];
   if (amunicja.length > 0) {
-    renderSectionHeading("Powierzchnia ataku — amunicja dla oponentów", rgb(0.75, 0.07, 0.24));
+    renderSectionHeading("Powierzchnia ataku — amunicja dla oponentów", 90, rgb(0.72, 0.1, 0.15));
 
-    for (const am of amunicja) {
-      const qLines = am.cytat_ryzykowny ? wrapText(`Ryzykowny cytat: „${am.cytat_ryzykowny}”`, fontB, 8.5, contentWidth - 10) : [];
-      const rLines = am.potencjalne_uderzenie_opozycji ? wrapText(`Ryzyko kontrataku: ${am.potencjalne_uderzenie_opozycji}`, fontR, 8.5, contentWidth - 20) : [];
-
-      const totalH = (qLines.length + rLines.length) * 11 + 10;
-      checkPageBreak(totalH);
-
-      for (const l of qLines) {
-        page.drawText(l, { x: margin + 4, y: y - 8, size: 8.5, font: fontB, color: rgb(0.6, 0.11, 0.11) });
-        y -= 11;
-      }
-      for (const l of rLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8.5, font: fontR, color: rgb(0.28, 0.33, 0.41) });
-        y -= 11;
-      }
-      y -= 4;
-    }
-    y -= 6;
+    amunicja.forEach((am: any, idx: number) => {
+      renderAtomicCard({
+        badgeLabel: `AMUNICJA DLA OPONENTÓW #${idx + 1}`,
+        badgeBg: rgb(0.97, 0.86, 0.88),
+        badgeFg: rgb(0.68, 0.08, 0.14),
+        accentColor: rgb(0.72, 0.1, 0.15),
+        bgCard: rgb(0.99, 0.97, 0.97),
+        borderCard: rgb(0.94, 0.84, 0.86),
+        title: "Ryzykowny cytat podatny na wycięcie w mediach",
+        quote: am.cytat_ryzykowny,
+        description: am.potencjalne_uderzenie_opozycji,
+      });
+    });
   }
 
-  // 9. GOTOWE RIPOSTY SZTABOWE ("ZAMIAST X -> MÓW Y")
+  // 9. SKRYPTY NAPRAWCZE — GOTOWE RIPOSTY SZTABOWE
   const riposty = mkt.gotowe_riposty_zamiast_bledow || [];
   if (riposty.length > 0) {
-    renderSectionHeading("Skrypty naprawcze — gotowe riposty sztabowe", rgb(0.01, 0.41, 0.63));
+    renderSectionHeading("Skrypty naprawcze — gotowe riposty sztabowe", 90, rgb(0.03, 0.48, 0.72));
 
-    for (const rip of riposty) {
-      const qLines = rip.kontekst_pytania ? wrapText(`Pytanie: ${rip.kontekst_pytania}`, fontB, 8, contentWidth - 10) : [];
-      const badLines = rip.co_powiedzial ? wrapText(`Błędna odpowiedź: „${rip.co_powiedzial}”`, fontR, 8, contentWidth - 20) : [];
-      const goodLines = rip.rekomendowana_riposta ? wrapText(`Rekomendacja sztabowa: ${rip.rekomendowana_riposta}`, fontB, 8.5, contentWidth - 20) : [];
-
-      const totalH = (qLines.length + badLines.length + goodLines.length) * 11 + 10;
-      checkPageBreak(totalH);
-
-      for (const l of qLines) {
-        page.drawText(l, { x: margin + 4, y: y - 8, size: 8, font: fontB, color: rgb(0.39, 0.45, 0.55) });
-        y -= 10;
-      }
-      for (const l of badLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8, font: fontR, color: rgb(0.6, 0.11, 0.11) });
-        y -= 10;
-      }
-      for (const l of goodLines) {
-        page.drawText(l, { x: margin + 12, y: y - 8, size: 8.5, font: fontB, color: rgb(0.08, 0.5, 0.24) });
-        y -= 11;
-      }
-      y -= 4;
-    }
-    y -= 6;
+    riposty.forEach((rip: any, idx: number) => {
+      renderAtomicCard({
+        badgeLabel: `SKRYPT #${idx + 1}`,
+        badgeBg: rgb(0.86, 0.92, 0.98),
+        badgeFg: rgb(0.04, 0.38, 0.62),
+        accentColor: rgb(0.03, 0.48, 0.72),
+        bgCard: rgb(0.97, 0.98, 1.0),
+        borderCard: rgb(0.85, 0.9, 0.96),
+        title: rip.kontekst_pytania ? `Pytanie: ${rip.kontekst_pytania}` : `Sytuacja trudna #${idx + 1}`,
+        quote: rip.co_powiedzial ? `Błędna wypowiedź: ${rip.co_powiedzial}` : null,
+        extraBox: rip.rekomendowana_riposta
+          ? {
+              label: "Rekomendowana riposta sztabowa",
+              text: rip.rekomendowana_riposta,
+              bgColor: rgb(0.92, 0.97, 0.94),
+              textColor: rgb(0.06, 0.48, 0.25),
+              accentBar: rgb(0.08, 0.58, 0.32),
+            }
+          : null,
+      });
+    });
   }
 
-  // 10. WARSZTAT MOWY I WPŁYW NA ELEKTORAT
+  // 10. WARSZTAT MEDIALNY, NOŚNOŚĆ CYTATÓW I WPŁYW NA ELEKTORAT
   if (mkt.warsztat_mowy_i_dykcji || mkt.nosnosc_medialna_soundbites || mkt.wplyw_na_elektorat) {
-    renderSectionHeading("Warsztat medialny, nośność cytatów i wpływ na elektorat");
-
-    const renderBlock = (label: string, text: string) => {
-      if (!text) return;
-      const lines = wrapText(text, fontR, 8.5, contentWidth - 16);
-      checkPageBreak(20 + lines.length * 11);
-
-      page.drawText(label, {
-        x: margin + 4,
-        y: y - 8,
-        size: 8,
-        font: fontB,
-        color: rgb(0.28, 0.33, 0.41),
-      });
-      y -= 12;
-
-      for (const l of lines) {
-        page.drawText(l, {
-          x: margin + 4,
-          y: y - 8,
-          size: 8.5,
-          font: fontR,
-          color: rgb(0.12, 0.16, 0.23),
-        });
-        y -= 11;
-      }
-      y -= 4;
-    };
+    renderSectionHeading("Warsztat medialny, nośność cytatów i wpływ na elektorat", 90, rgb(0.2, 0.3, 0.45));
 
     if (mkt.warsztat_mowy_i_dykcji) {
-      renderBlock("Warsztat mowy, dykcja i tempo:", mkt.warsztat_mowy_i_dykcji);
+      renderAtomicCard({
+        badgeLabel: "WARSZTAT",
+        badgeBg: rgb(0.9, 0.92, 0.96),
+        badgeFg: rgb(0.18, 0.25, 0.38),
+        accentColor: rgb(0.25, 0.35, 0.52),
+        bgCard: rgb(0.98, 0.98, 0.99),
+        borderCard: rgb(0.88, 0.9, 0.94),
+        title: "Warsztat mowy, dykcja, tempo i pauzy retoryczne",
+        description: mkt.warsztat_mowy_i_dykcji,
+      });
     }
+
     if (mkt.nosnosc_medialna_soundbites) {
-      renderBlock("Kluczowa 'setka' i nośność medialna (soundbites):", mkt.nosnosc_medialna_soundbites);
+      renderAtomicCard({
+        badgeLabel: "SOUNDBITES",
+        badgeBg: rgb(0.96, 0.91, 0.82),
+        badgeFg: rgb(0.65, 0.4, 0.05),
+        accentColor: rgb(0.8, 0.5, 0.08),
+        bgCard: rgb(0.99, 0.98, 0.96),
+        borderCard: rgb(0.94, 0.9, 0.84),
+        title: "Kluczowa nośna 'setka' do serwisów informacyjnych",
+        description: mkt.nosnosc_medialna_soundbites,
+      });
     }
+
     if (mkt.wplyw_na_elektorat) {
       const el = mkt.wplyw_na_elektorat;
-      if (el.twardy_elektorat) renderBlock("Reakcja twardego elektoratu:", el.twardy_elektorat);
-      if (el.niezdecydowani) renderBlock("Odbiór przez wyborców niezdecydowanych (centrum):", el.niezdecydowani);
-      if (el.przeciwnicy) renderBlock("Odbiór przez oponentów:", el.przeciwnicy);
+      if (el.twardy_elektorat) {
+        renderAtomicCard({
+          badgeLabel: "ELEKTORAT BAZOWY",
+          badgeBg: rgb(0.88, 0.94, 0.98),
+          badgeFg: rgb(0.08, 0.38, 0.62),
+          accentColor: rgb(0.12, 0.45, 0.72),
+          bgCard: rgb(0.98, 0.99, 1.0),
+          borderCard: rgb(0.88, 0.92, 0.96),
+          title: "Odbiór przez twardy elektorat",
+          description: el.twardy_elektorat,
+        });
+      }
+      if (el.niezdecydowani) {
+        renderAtomicCard({
+          badgeLabel: "WYBORCY CENTRUM",
+          badgeBg: rgb(0.96, 0.93, 0.86),
+          badgeFg: rgb(0.6, 0.42, 0.08),
+          accentColor: rgb(0.78, 0.52, 0.1),
+          bgCard: rgb(0.99, 0.98, 0.96),
+          borderCard: rgb(0.94, 0.9, 0.85),
+          title: "Odbiór przez wyborców niezdecydowanych (centrum)",
+          description: el.niezdecydowani,
+        });
+      }
+      if (el.przeciwnicy) {
+        renderAtomicCard({
+          badgeLabel: "OPONENCI",
+          badgeBg: rgb(0.97, 0.88, 0.88),
+          badgeFg: rgb(0.7, 0.12, 0.16),
+          accentColor: rgb(0.8, 0.15, 0.2),
+          bgCard: rgb(0.99, 0.97, 0.97),
+          borderCard: rgb(0.94, 0.86, 0.87),
+          title: "Odbiór i amunicja dla elektoratu oponentów",
+          description: el.przeciwnicy,
+        });
+      }
     }
-    y -= 6;
   }
 
-  // 11. REKOMENDACJE SZTABOWE
+  // 11. STRATEGICZNE REKOMENDACJE SZTABOWE
   const rekomendacje = mkt.rekomendacje_sztabowe || [];
   if (rekomendacje.length > 0) {
-    renderSectionHeading("Strategiczne rekomendacje sztabowe");
+    renderSectionHeading("Strategiczne rekomendacje sztabowe", 90, rgb(0.06, 0.09, 0.16));
 
     rekomendacje.forEach((rek: string, idx: number) => {
-      const lines = wrapText(`${idx + 1}. ${rek}`, fontR, 8.5, contentWidth - 12);
-      checkPageBreak(lines.length * 11 + 6);
-
-      for (let i = 0; i < lines.length; i++) {
-        page.drawText(lines[i], {
-          x: margin + 4,
-          y: y - 8,
-          size: 8.5,
-          font: i === 0 ? fontB : fontR,
-          color: rgb(0.12, 0.16, 0.23),
-        });
-        y -= 11;
-      }
-      y -= 3;
+      renderAtomicCard({
+        badgeLabel: `DYREKTYWA #${idx + 1}`,
+        badgeBg: rgb(0.9, 0.92, 0.95),
+        badgeFg: rgb(0.18, 0.24, 0.34),
+        accentColor: rgb(0.12, 0.18, 0.28),
+        bgCard: rgb(0.98, 0.99, 0.99),
+        borderCard: rgb(0.88, 0.91, 0.94),
+        title: `Dyrektywa sztabowa #${idx + 1}`,
+        description: rek,
+      });
     });
-    y -= 6;
   }
 
-  // 12. NOTA METODOLOGICZNA
-  checkPageBreak(35);
+  // 12. NOTA METODOLOGICZNA I KLAUZULA PRAWNA
   const disclaimers = wrapText(
     "Nota metodologiczna: Raport sporządzony automatycznie przez system E-PROFILER w oparciu o multimodalną analizę behawioralną, akustykę głosu i retorykę wystąpienia. Zgodnie z art. 85 RODO oraz wymogami AI Act dokument ma charakter analityczno-doradczy.",
     fontR,
     7,
-    contentWidth
+    contentWidth - 20
   );
-  for (const l of disclaimers) {
-    page.drawText(l, {
-      x: margin,
-      y: y - 8,
-      size: 7,
-      font: fontR,
-      color: rgb(0.58, 0.64, 0.72),
-    });
-    y -= 9;
+  const discHeight = 16 + disclaimers.length * 9.5;
+  if (y - discHeight < bottomMargin) {
+    page = addReportPage();
   }
 
-  // 11. STOPKA I PAGINACJA NA KAŻDEJ STRONIE
+  page.drawRectangle({
+    x: margin,
+    y: y - discHeight,
+    width: contentWidth,
+    height: discHeight,
+    color: rgb(0.96, 0.97, 0.98),
+    borderColor: rgb(0.88, 0.91, 0.94),
+    borderWidth: 0.5,
+  });
+
+  let dY = y - 12;
+  for (const l of disclaimers) {
+    page.drawText(l, {
+      x: margin + 10,
+      y: dY,
+      size: 7,
+      font: fontR,
+      color: rgb(0.48, 0.54, 0.62),
+    });
+    dY -= 9.5;
+  }
+
+  // 13. STOPKA I PAGINACJA NA KAŻDEJ STRONIE (Footers)
   const totalPages = doc.getPageCount();
   for (let i = 0; i < totalPages; i++) {
     const p = doc.getPage(i);
+
     p.drawLine({
       start: { x: margin, y: 28 },
       end: { x: pageWidth - margin, y: 28 },
@@ -536,12 +823,12 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
       color: rgb(0.88, 0.91, 0.94),
     });
 
-    p.drawText("E-PROFILER • Copyright by Multinewsroom (multinewsroom.pl)", {
+    p.drawText("E-PROFILER • System wywiadu behawioralnego i audytu sztabowego (eprofiler.pl)", {
       x: margin,
       y: 18,
-      size: 7.5,
+      size: 7,
       font: fontR,
-      color: rgb(0.39, 0.45, 0.55),
+      color: rgb(0.42, 0.48, 0.56),
     });
 
     const pageText = `Strona ${i + 1} z ${totalPages}`;
@@ -551,7 +838,7 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
       y: 18,
       size: 7.5,
       font: fontB,
-      color: rgb(0.28, 0.33, 0.41),
+      color: rgb(0.18, 0.23, 0.31),
     });
   }
 
