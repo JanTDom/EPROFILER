@@ -144,114 +144,129 @@ export async function POST(request: Request) {
       : "Kluczowa zasada — identyfikacja osoby diagnozowanej z kontekstu: Z powitań, zapowiedzi redakcyjnych („W studiu gościmy...”, „Naszym gościem jest...”), zwrotów formalnych („Panie pośle/ministrze/premierze...”) oraz dynamiki pytań i odpowiedzi bezbłędnie wywnioskuj z kontekstu rozmowy, kim jest badany gość / polityk / ekspert (osoba diagnozowana). Oznacz go jako 'jest_celem': true.";
 
     const promptText = isAudio
-      ? `Przesłuchaj i przeanalizuj to nagranie dźwiękowe / audio (podcast, wywiad radiowy, nagranie z dyktafonu lub telefonu). ${targetInfo}
-Zakres profilowania: ${scope === "pelny" ? "Pełny audyt sztabowy głosu i retoryki (psychologia głosu, prozodia, nielogiczności, marketing polityczny, warsztat)" : "Tylko stan psychiczny i akustyka głosu"}.
+      ? `Przesłuchaj i przeanalizuj w całości to nagranie dźwiękowe / audio (podcast, wywiad radiowy, nagranie z dyktafonu lub telefonu). ${targetInfo}
+Zakres profilowania: ${scope === "pelny" ? "Pełny, wyczerpujący audyt sztabowy głosu i retoryki (psychologia głosu, prozodia, nielogiczności, marketing polityczny, warsztat)" : "Tylko stan psychiczny i akustyka głosu"}.
 
 Specjalne wytyczne dla nagrania audio:
 1. Brak obrazu wideo: To nagranie jest wyłącznie ścieżką dźwiękową. Kategorycznie nie wymyślaj ani nie halucynuj mimiki twarzy, jednostek FACS (AU1, AU4, AU12 itp.), kontaktu wzrokowego ani ruchów ciała!
 2. Prozodia i akustyka głosu: W sekcji 'niepozadane_emocje_i_mowa_ciala' opisz wyłącznie wycieki emocjonalne w głosie: nagłe skoki wysokości tonu (F0), załamania głosu, drżenie (pitch jitter/shimmer), spłycenie oddechu, spięcie krtani, nerwowy chichot, agresywną intonację, defensywne ucinanie wypowiedzi, zniecierpliwienie i protekcjonalny ton.
 3. Zrozumienie i focus na osobie diagnozowanej: Rozróżnij dziennikarza/prowadzącego od osoby diagnozowanej. Cały profil, werdykt, błędy, uniki, ocena i analiza głosu muszą dotyczyć wyłącznie osoby diagnozowanej!
 4. Bezwzględna czujność i brak taryfy ulgowej: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach.
-5. Detekcja nielogiczności i luk w argumentacji: Wskaż sprzeczności wewnętrzne, uniki i brak logiki.
-6. Amunicja dla oponentów: Wskaż sformułowania tzw. 'samobóje'.
-7. Skrypty korekcyjne: Do błędów podaj gotową ripostę („Zamiast X -> Mów Y”).
-8. Kalibracja oceny: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
-9. Format językowy: Sentence case (tylko pierwsza litera zdania wielka), czysta polszczyzna, zwięzłość, odpowiedź wyłącznie poprawnym JSON-em.`
-      : `Obejrzyj i przeanalizuj to nagranie wideo. ${targetInfo}
-Zakres profilowania: ${scope === "pelny" ? "Pełny audyt sztabowy (psychologia, mowa ciała, nielogiczności, marketing polityczny, warsztat)" : "Tylko stan psychiczny i behawioralny"}.
+5. Maksymalna szczegółowość i gęstość informacyjna: Nie twórz skrótów ani jednozdaniowych podsumowań! Podaj minimum 4-6 rozbudowanych atutów, 4-6 kardynalnych błędów z dokładnymi cytatami, 4-6 wycieków emocjonalnych w głosie, 3-5 luk logicznych, 3-5 ryzykownych wypowiedzi dla oponentów, 4-6 gotowych ripost sztabowych („Zamiast X -> Mów Y”) oraz 5-8 dyrektyw strategicznych.
+6. Kalibracja oceny: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
+7. Format językowy: W zdaniu tylko pierwsza litera pierwszego wyrazu ma być wielka, chyba że gdzieś jest nazwa własna. Czysta polszczyzna, odpowiedź wyłącznie poprawnym JSON-em.`
+      : `Obejrzyj i przeanalizuj w całości to nagranie wideo. ${targetInfo}
+Zakres profilowania: ${scope === "pelny" ? "Pełny, wyczerpujący audyt sztabowy 360° (psychologia, mowa ciała FACS, nielogiczności, marketing polityczny, warsztat)" : "Tylko stan psychiczny i behawioralny"}.
 
 Zasady audytu sztabowego:
 1. Zrozumienie i focus na osobie diagnozowanej: Rozróżnij dziennikarza/prowadzącego od osoby diagnozowanej. Cały profil, werdykt, błędy, uniki, ocena i mowa ciała muszą dotyczyć wyłącznie osoby diagnozowanej!
 2. Bezwzględna czujność i brak taryfy ulgowej: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach.
-3. Detekcja niepożądanych emocji: Wskaż momenty irytacji, protekcjonalizmu, uśmieszków wyższości (AU14) czy bezradności.
-4. Detekcja nielogiczności i luk w argumentacji: Wskaż sprzeczności wewnętrzne i uniki.
-5. Amunicja dla oponentów: Wskaż sformułowania tzw. 'samobóje'.
-6. Skrypty korekcyjne: Do błędów podaj gotową ripostę („Zamiast X -> Mów Y”).
-7. Kalibracja oceny: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
-8. Format językowy: Sentence case, czysta polszczyzna, zwięzłość, odpowiedź wyłącznie poprawnym JSON-em.
+3. Detekcja niepożądanych emocji i FACS: Wskaż momenty irytacji, protekcjonalizmu, uśmieszków wyższości i pogardy (AU14), zmarszczenia brwi (AU4), napięcia powiek (AU7) czy bezradności.
+4. Maksymalna głębia i gęstość informacyjna (pełny, wyczerpujący audyt sztabowy — nie podawaj skrótów ani pojedynczych punktów!):
+   - W sekcji 'glowne_plusy': podaj od 4 do 7 kluczowych atutów (dla każdego podaj dosłowny cytat i analityczne uzasadnienie).
+   - W sekcji 'popelnione_bledy_i_minusy': podaj od 4 do 7 kardynalnych błędów lub uchybień z dosłownymi cytatami, analizą straty i dekonstrukcją psychologiczną.
+   - W sekcji 'niepozadane_emocje_i_mowa_ciala': podaj od 4 do 6 konkretnych wycieków z kodami FACS lub zachowaniami ciała oraz z dyrektywą sztabową.
+   - W sekcji 'nielogicznosci_i_luki_argumentacyjne': podaj od 3 do 5 konkretnych luk logicznych, uników lub sprzeczności z analizą ryzyka kontrataku.
+   - W sekcji 'amunicja_dla_oponentow': podaj od 3 do 5 ryzykownych cytatów ('samobójów') wraz z opisem jak sztab konkurencji wytnie je na spoty i paski.
+   - W sekcji 'gotowe_riposty_zamiast_bledow': podaj od 4 do 6 gotowych formuł sztabowych ('Zamiast: X -> Mów: Y').
+   - W sekcji 'wnioski': każdy punkt rozwiń w pełne, analityczne 3-5 zdań z dowodami.
+   - W sekcji 'rekomendacje_sztabowe': podaj od 5 do 8 precyzyjnych, twardych dyrektyw sztabowych.
+5. Kalibracja oceny: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
+6. Format językowy: W zdaniu tylko pierwsza litera pierwszego wyrazu ma być wielka, chyba że gdzieś jest nazwa własna. Czysta polszczyzna, odpowiedź wyłącznie poprawnym JSON-em.
 
 Zwróć poprawny JSON o schemacie:
 {
   "tytul_wideo": "Tytuł lub dokładny temat rozmowy (np. Imię Nazwisko: Temat)",
   "czas_trwania_sek": 600,
-  "temat_rozmowy": "Zwięzły, 2-3 zdaniowy opis w sentence case, o czym dokładnie jest to nagranie",
+  "temat_rozmowy": "Obszerny, 2-4 zdaniowy opis w sentence case, o czym dokładnie jest to nagranie",
   "rozpoznani_mowcy": [
     {
       "speaker_tag": "SPEAKER_00",
       "imie_nazwisko": "Imię i nazwisko",
       "rola": "Dziennikarz / prowadzący | Badany polityk | Kontrkandydat",
       "opis": "Zwięzły opis roli w rozmowie",
-      "jest_celem": true/false
+      "jest_celem": true
     }
   ],
   "wybrany_speaker_tag": "SPEAKER_XX",
+  "profil_psychometryczny_wielka_piatka": {
+    "otwartosc": 65,
+    "sumiennosc": 58,
+    "ekstrawersja": 72,
+    "ugodowosc": 45,
+    "neurotyzm": 40,
+    "dominacja_vs_uleglosc": 0.35,
+    "wrogosc_vs_cieplo": 0.10
+  },
   "wnioski": {
-    "nastroje_i_emocje": "Esencjonalna diagnoza nastroju, stabilności i energii badanego z cytatem",
-    "glowne_uniki_i_taktyka": "Zwięzła analiza taktyki rozmowy z cytatem",
-    "czule_punkty_stres": "Dekonstrukcja momentów podwyższonego napięcia z cytatem",
-    "spojnosc_mowy_ze_slowami": "Ocena czy ton i modulacja głosu współgrają ze słowami",
-    "sila_argumentacji": "Ocena logicznej spójności i proporcji faktów do uników",
-    "czy_odbiorcy_to_kupia": "Diagnoza wiarygodności w oczach widzów",
-    "pojedynek_z_adwersarzami": "Ocena kontroli nad sytuacją w studiu"
+    "nastroje_i_emocje": "Rozbudowana diagnoza nastroju, stabilności i energii badanego z cytatami (3-5 zdań)",
+    "glowne_uniki_i_taktyka": "Szczegółowa analiza taktyki rozmowy, unikania trudnych wątków i defensywy z cytatami (3-5 zdań)",
+    "czule_punkty_stres": "Dekonstrukcja momentów podwyższonego napięcia i pytań, które wywołały dekompozycję (3-5 zdań)",
+    "spojnosc_mowy_ze_slowami": "Ocena czy ton głosu i mowa ciała współgrają ze słowami, czy występuje dysonans poznawczy (3-5 zdań)",
+    "sila_argumentacji": "Rygorystyczna ocena logicznej spójności, wagi merytorycznej i proporcji faktów do erystyki (3-5 zdań)",
+    "czy_odbiorcy_to_kupia": "Diagnoza autentyczności i wiarygodności w oczach wyborców (3-5 zdań)",
+    "pojedynek_z_adwersarzami": "Ocena dominacji, kontroli nad narracją i odporności na presję dziennikarza (3-5 zdań)"
   },
   "marketing_polityczny": {
     "werdykt": "Występ poprawny z zastrzeżeniami | Bilans mieszany ze wskazaniem na błędy | Sukces wizerunkowy | Porażka wizerunkowa",
     "ocena_punktowa_1_10": 6,
-    "uzasadnienie_werdyktu": "Zwięzłe uzasadnienie werdyktu",
+    "uzasadnienie_werdyktu": "Rozbudowane, 3-5 zdaniowe uzasadnienie werdyktu",
     "glowne_plusy": [
       {
-        "nazwa_atutu": "Zwięzły tytuł atutu w sentence case",
+        "nazwa_atutu": "Tytuł atutu w sentence case",
         "cytat_lub_moment": "Dosłowny cytat z nagrania",
-        "dlaczego_to_plus": "Precyzyjne wyjaśnienie dlaczego to atut"
+        "dlaczego_to_plus": "Precyzyjne i wyczerpujące wyjaśnienie dlaczego to atut wizerunkowy"
       }
     ],
     "popelnione_bledy_i_minusy": [
       {
-        "nazwa_bledu": "Zwięzły tytuł błędu w sentence case",
+        "nazwa_bledu": "Tytuł błędu w sentence case",
         "cytat_lub_moment": "Dosłowny cytat pokazujący moment błędu",
-        "dlaczego_to_minus": "Krytyczna dekonstrukcja uchybienia"
+        "dlaczego_to_minus": "Krytyczna dekonstrukcja uchybienia i szkody politycznej"
       }
     ],
     "niepozadane_emocje_i_mowa_ciala": [
       {
-        "reakcja_lub_emocja": "Nazwa niepożądanej emocji",
+        "reakcja_lub_emocja": "Nazwa niepożądanej emocji lub mikroruchu FACS",
         "cytat_lub_moment": "Dosłowny cytat lub moment w nagraniu",
-        "dlaczego_to_szkodliwe": "Dlaczego liderowi nie wolno tego okazywać",
-        "zalecenie_sztabowe": "Jak wygasić ten nawyk"
+        "dlaczego_to_szkodliwe": "Dlaczego liderowi nie wolno tego okazywać w studiu",
+        "zalecenie_sztabowe": "Konkretna technika wygaszenia tego nawyku"
       }
     ],
     "nielogicznosci_i_luki_argumentacyjne": [
       {
-        "luka_lub_sprzecznosc": "Nazwa błędu logicznego",
+        "luka_lub_sprzecznosc": "Nazwa błędu logicznego lub sofizmatu",
         "cytat_lub_moment": "Fragment wypowiedzi",
-        "diagnoza_logiczna": "Na czym polega brak logiki",
-        "ryzyko_kontrataku": "Jak oponent może to wykorzystać"
+        "diagnoza_logiczna": "Na czym polega brak logiki lub sprzeczność",
+        "ryzyko_kontrataku": "Jak oponent może bezlitośnie to obrócić przeciw politykowi"
       }
     ],
     "amunicja_dla_oponentow": [
       {
         "cytat_ryzykowny": "Niefortunny cytat ('samobój')",
-        "potencjalne_uderzenie_opozycji": "Jak sztab przeciwników to wykorzysta"
+        "potencjalne_uderzenie_opozycji": "Jak sztab przeciwników wytnie to na spoty i paski w mediach"
       }
     ],
     "gotowe_riposty_zamiast_bledow": [
       {
         "kontekst_pytania": "Trudne pytanie dziennikarza",
         "co_powiedzial": "Błędna odpowiedź polityka z nagrania",
-        "rekomendowana_riposta": "Gotowa, bezpieczna formuła sztabowa"
+        "rekomendowana_riposta": "Gotowa, optymalna formuła sztabowa z przekierowaniem na własny temat"
       }
     ],
-    "warsztat_mowy_i_dykcji": "Zwięzła ocena techniczna: tempo, intonacja, pauzy",
-    "nosnosc_medialna_soundbites": "Zwięzła ocena najlepszej 'setki' z cytatem",
+    "warsztat_mowy_i_dykcji": "Ocena techniczna: tempo mowy, intonacja, pauzy retoryczne i praca z oddechem",
+    "nosnosc_medialna_soundbites": "Wybór najlepszej 'setki' do serwisów informacyjnych wraz z cytatem",
     "wplyw_na_elektorat": {
-      "twardy_elektorat": "Diagnoza reakcji twardego elektoratu",
-      "niezdecydowani": "Diagnoza odbioru przez wyborców z centrum",
-      "przeciwnicy": "Amunicja dla oponentów"
+      "twardy_elektorat": "Diagnoza odbioru przez bazowy elektorat partii",
+      "niezdecydowani": "Diagnoza odbioru przez wyborców środka",
+      "przeciwnicy": "Amunicja dla wyborców i mediów oponentów"
     },
     "rekomendacje_sztabowe": [
       "Dyrektywa sztabowa 1",
       "Dyrektywa sztabowa 2",
-      "Dyrektywa sztabowa 3"
+      "Dyrektywa sztabowa 3",
+      "Dyrektywa sztabowa 4",
+      "Dyrektywa sztabowa 5"
     ]
   }
 }`;
@@ -381,16 +396,17 @@ Zwróć poprawny JSON o schemacie:
     const plusy = mkt.glowne_plusy || [];
     const minusy = mkt.popelnione_bledy_i_minusy || [];
 
+    const psych = analysis.profil_psychometryczny_wielka_piatka || {};
     const profileEntry = {
       id: crypto.randomUUID(),
       recording_id: recordingId,
-      otwartosc: 50,
-      sumiennosc: 50,
-      ekstrawersja: 50,
-      ugodowosc: 50,
-      neurotyzm: 50,
-      dominacja_vs_uleglosc: 0.0,
-      wrogosc_vs_cieplo: 0.0,
+      otwartosc: typeof psych.otwartosc === "number" ? psych.otwartosc : 50,
+      sumiennosc: typeof psych.sumiennosc === "number" ? psych.sumiennosc : 50,
+      ekstrawersja: typeof psych.ekstrawersja === "number" ? psych.ekstrawersja : 50,
+      ugodowosc: typeof psych.ugodowosc === "number" ? psych.ugodowosc : 50,
+      neurotyzm: typeof psych.neurotyzm === "number" ? psych.neurotyzm : 50,
+      dominacja_vs_uleglosc: typeof psych.dominacja_vs_uleglosc === "number" ? psych.dominacja_vs_uleglosc : 0.0,
+      wrogosc_vs_cieplo: typeof psych.wrogosc_vs_cieplo === "number" ? psych.wrogosc_vs_cieplo : 0.0,
       nastroj_glowny_prosty: wnioski.nastroje_i_emocje || "Opanowany i skupiony",
       styl_komunikacji_prosty: wnioski.glowne_uniki_i_taktyka || "Rzeczowy i bezpośredni",
       czule_punkty_i_leki: minusy,

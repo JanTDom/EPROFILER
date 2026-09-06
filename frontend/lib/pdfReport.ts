@@ -203,7 +203,15 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
   };
 
   // 3. SYNTEZA BEHAWIORALNA
-  if (wnioski.nastroje_i_emocje || wnioski.glowne_uniki_i_taktyka || wnioski.spojnosc_mowy_ze_slowami) {
+  if (
+    wnioski.nastroje_i_emocje ||
+    wnioski.glowne_uniki_i_taktyka ||
+    wnioski.czule_punkty_stres ||
+    wnioski.spojnosc_mowy_ze_slowami ||
+    wnioski.sila_argumentacji ||
+    wnioski.czy_odbiorcy_to_kupia ||
+    wnioski.pojedynek_z_adwersarzami
+  ) {
     renderSectionHeading("Diagnoza psychologiczna i postawa komunikacyjna");
 
     const renderInsight = (label: string, text: string) => {
@@ -235,7 +243,11 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
 
     renderInsight("Nastrój i stabilność emocjonalna:", wnioski.nastroje_i_emocje);
     renderInsight("Strategia rozmowy i taktyka odpowiedzi:", wnioski.glowne_uniki_i_taktyka);
+    renderInsight("Czułe punkty i momenty stresu:", wnioski.czule_punkty_stres);
     renderInsight("Spójność tonu głosu z treścią wypowiedzi:", wnioski.spojnosc_mowy_ze_slowami);
+    renderInsight("Siła i logika argumentacji:", wnioski.sila_argumentacji);
+    renderInsight("Wiarygodność w oczach odbiorców:", wnioski.czy_odbiorcy_to_kupia);
+    renderInsight("Pojedynek z adwersarzami i kontrola nad studiem:", wnioski.pojedynek_z_adwersarzami);
     y -= 6;
   }
 
@@ -334,7 +346,42 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     y -= 6;
   }
 
-  // 7. AMUNICJA DLA OPONENTÓW ('SAMOBÓJE')
+  // 7. NIELOGICZNOŚCI I LUKI ARGUMENTACYJNE
+  const luki = mkt.nielogicznosci_i_luki_argumentacyjne || [];
+  if (luki.length > 0) {
+    renderSectionHeading("Nielogiczności, luki argumentacyjne i manipulacje", rgb(0.55, 0.15, 0.6));
+
+    for (const luka of luki) {
+      const titleLines = wrapText(`§ ${luka.luka_lub_sprzecznosc || "Błąd logiczny"}`, fontB, 9, contentWidth - 10);
+      const quoteLines = luka.cytat_lub_moment ? wrapText(`Fragment: „${luka.cytat_lub_moment}”`, fontR, 8, contentWidth - 20) : [];
+      const diagLines = luka.diagnoza_logiczna ? wrapText(`Diagnoza: ${luka.diagnoza_logiczna}`, fontR, 8.5, contentWidth - 20) : [];
+      const riskLines = luka.ryzyko_kontrataku ? wrapText(`Ryzyko kontrataku: ${luka.ryzyko_kontrataku}`, fontB, 8, contentWidth - 20) : [];
+
+      const totalH = (titleLines.length + quoteLines.length + diagLines.length + riskLines.length) * 11 + 10;
+      checkPageBreak(totalH);
+
+      for (const l of titleLines) {
+        page.drawText(l, { x: margin + 4, y: y - 8, size: 9, font: fontB, color: rgb(0.55, 0.15, 0.6) });
+        y -= 11;
+      }
+      for (const l of quoteLines) {
+        page.drawText(l, { x: margin + 12, y: y - 8, size: 8, font: fontR, color: rgb(0.28, 0.33, 0.41) });
+        y -= 10;
+      }
+      for (const l of diagLines) {
+        page.drawText(l, { x: margin + 12, y: y - 8, size: 8.5, font: fontR, color: rgb(0.12, 0.16, 0.23) });
+        y -= 11;
+      }
+      for (const l of riskLines) {
+        page.drawText(l, { x: margin + 12, y: y - 8, size: 8, font: fontB, color: rgb(0.75, 0.07, 0.24) });
+        y -= 10;
+      }
+      y -= 4;
+    }
+    y -= 6;
+  }
+
+  // 8. AMUNICJA DLA OPONENTÓW ('SAMOBÓJE')
   const amunicja = mkt.amunicja_dla_oponentow || [];
   if (amunicja.length > 0) {
     renderSectionHeading("Powierzchnia ataku — amunicja dla oponentów", rgb(0.75, 0.07, 0.24));
@@ -359,7 +406,7 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     y -= 6;
   }
 
-  // 8. GOTOWE RIPOSTY SZTABOWE ("ZAMIAST X -> MÓW Y")
+  // 9. GOTOWE RIPOSTY SZTABOWE ("ZAMIAST X -> MÓW Y")
   const riposty = mkt.gotowe_riposty_zamiast_bledow || [];
   if (riposty.length > 0) {
     renderSectionHeading("Skrypty naprawcze — gotowe riposty sztabowe", rgb(0.01, 0.41, 0.63));
@@ -389,7 +436,53 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     y -= 6;
   }
 
-  // 9. REKOMENDACJE SZTABOWE
+  // 10. WARSZTAT MOWY I WPŁYW NA ELEKTORAT
+  if (mkt.warsztat_mowy_i_dykcji || mkt.nosnosc_medialna_soundbites || mkt.wplyw_na_elektorat) {
+    renderSectionHeading("Warsztat medialny, nośność cytatów i wpływ na elektorat");
+
+    const renderBlock = (label: string, text: string) => {
+      if (!text) return;
+      const lines = wrapText(text, fontR, 8.5, contentWidth - 16);
+      checkPageBreak(20 + lines.length * 11);
+
+      page.drawText(label, {
+        x: margin + 4,
+        y: y - 8,
+        size: 8,
+        font: fontB,
+        color: rgb(0.28, 0.33, 0.41),
+      });
+      y -= 12;
+
+      for (const l of lines) {
+        page.drawText(l, {
+          x: margin + 4,
+          y: y - 8,
+          size: 8.5,
+          font: fontR,
+          color: rgb(0.12, 0.16, 0.23),
+        });
+        y -= 11;
+      }
+      y -= 4;
+    };
+
+    if (mkt.warsztat_mowy_i_dykcji) {
+      renderBlock("Warsztat mowy, dykcja i tempo:", mkt.warsztat_mowy_i_dykcji);
+    }
+    if (mkt.nosnosc_medialna_soundbites) {
+      renderBlock("Kluczowa 'setka' i nośność medialna (soundbites):", mkt.nosnosc_medialna_soundbites);
+    }
+    if (mkt.wplyw_na_elektorat) {
+      const el = mkt.wplyw_na_elektorat;
+      if (el.twardy_elektorat) renderBlock("Reakcja twardego elektoratu:", el.twardy_elektorat);
+      if (el.niezdecydowani) renderBlock("Odbiór przez wyborców niezdecydowanych (centrum):", el.niezdecydowani);
+      if (el.przeciwnicy) renderBlock("Odbiór przez oponentów:", el.przeciwnicy);
+    }
+    y -= 6;
+  }
+
+  // 11. REKOMENDACJE SZTABOWE
   const rekomendacje = mkt.rekomendacje_sztabowe || [];
   if (rekomendacje.length > 0) {
     renderSectionHeading("Strategiczne rekomendacje sztabowe");
@@ -413,7 +506,7 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     y -= 6;
   }
 
-  // 10. NOTA METODOLOGICZNA
+  // 12. NOTA METODOLOGICZNA
   checkPageBreak(35);
   const disclaimers = wrapText(
     "Nota metodologiczna: Raport sporządzony automatycznie przez system E-PROFILER w oparciu o multimodalną analizę behawioralną, akustykę głosu i retorykę wystąpienia. Zgodnie z art. 85 RODO oraz wymogami AI Act dokument ma charakter analityczno-doradczy.",

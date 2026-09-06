@@ -405,7 +405,11 @@ export default function RecordingDetailPage() {
                       Tryb analizy akustycznej: fale F0, stabilność fonacji i intonacja
                     </span>
                   </div>
-                  <AudioPlayer recordingId={recording.id} seekToTimeSec={seekToTimeSec} />
+                  <AudioPlayer
+                    recordingId={recording.id}
+                    sourceUrl={recording.zrodlo_url}
+                    seekToTimeSec={seekToTimeSec}
+                  />
                 </>
               ) : (
                 <>
@@ -418,7 +422,12 @@ export default function RecordingDetailPage() {
                       Użyj 0.25x do wykrywania ułamkowych grymasów twarzy
                     </span>
                   </div>
-                  <VideoPlayer recordingId={recording.id} seekToTimeSec={seekToTimeSec} />
+                  <VideoPlayer
+                    recordingId={recording.id}
+                    sourceUrl={recording.zrodlo_url}
+                    sourceType={recording.zrodlo_typ}
+                    seekToTimeSec={seekToTimeSec}
+                  />
                 </>
               )}
             </div>
