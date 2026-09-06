@@ -69,7 +69,7 @@ export async function fetchRecording(id: string): Promise<Recording> {
             Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
           },
           cache: "no-store",
-          signal: AbortSignal.timeout(4000),
+          signal: AbortSignal.timeout(6000),
         }
       );
       if (res.ok) {
@@ -83,15 +83,26 @@ export async function fetchRecording(id: string): Promise<Recording> {
     }
   }
 
-  // 2. Fallback to local API_BASE
-  const res = await fetch(`${API_BASE}/api/recordings/${id}`, { 
-    cache: "no-store",
-    signal: AbortSignal.timeout(4000),
-  });
-  if (!res.ok) {
-    throw new Error(`Błąd pobierania nagrania: ${res.statusText}`);
+  // 2. Fallback to local API_BASE tylko w środowisku deweloperskim na localhost
+  const isLocalhost = typeof window !== "undefined"
+    ? (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+    : process.env.NODE_ENV === "development";
+
+  if (isLocalhost && API_BASE) {
+    try {
+      const res = await fetch(`${API_BASE}/api/recordings/${id}`, { 
+        cache: "no-store",
+        signal: AbortSignal.timeout(4000),
+      });
+      if (res.ok) {
+        return res.json();
+      }
+    } catch (e) {
+      console.warn("API_BASE fetchRecording failed:", e);
+    }
   }
-  return res.json();
+
+  throw new Error("Nagranie nie zostało znalezione lub jest w trakcie inicjalizacji w bazie.");
 }
 
 export function sanitizeVideoUrl(rawUrl: string): string {
@@ -377,35 +388,97 @@ export function subscribeToProgress(
   onComplete: (data: ProgressEventPayload) => void,
   onError?: (err: any) => void
 ): () => void {
-  const eventSource = new EventSource(`${API_BASE}/api/progress/${recordingId}`);
+  let isClosed = false;
 
-  eventSource.addEventListener("update", (event) => {
-    try {
-      const data: ProgressEventPayload = JSON.parse(event.data);
-      onUpdate(data);
-    } catch (e) {
-      console.error("Błąd parsowania zdarzenia SSE update", e);
-    }
-  });
+  // 1. W środowisku chmurowym (Vercel + Supabase) odpytuj stan bezpośrednio z bazy
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+    const pollStatus = async () => {
+      if (isClosed) return;
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/recordings?id=eq.${recordingId}&select=status_przetwarzania,krok_postepu,procent_postepu,blad`,
+          {
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            },
+            cache: "no-store",
+          }
+        );
+        if (res.ok) {
+          const rows = await res.json();
+          if (rows && rows.length > 0) {
+            const r = rows[0];
+            const payload: ProgressEventPayload = {
+              id: recordingId,
+              status: r.status_przetwarzania,
+              krok: r.krok_postepu || "Trwa analiza...",
+              procent: r.procent_postepu || 50,
+              blad: r.blad,
+            };
 
-  eventSource.addEventListener("complete", (event) => {
-    try {
-      const data: ProgressEventPayload = JSON.parse(event.data);
-      onComplete(data);
+            if (r.status_przetwarzania === "ZAKONCZONE" || r.status_przetwarzania === "GOTOWE_DO_TRANSKRYPCJI") {
+              onComplete(payload);
+              isClosed = true;
+              return;
+            } else if (r.status_przetwarzania === "BLAD") {
+              if (onError) onError(new Error(r.blad || "Wystąpił błąd podczas analizy."));
+              isClosed = true;
+              return;
+            } else {
+              onUpdate(payload);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Błąd odpytywania statusu nagrania:", e);
+      }
+    };
+
+    const intervalId = setInterval(pollStatus, 2500);
+    pollStatus();
+
+    return () => {
+      isClosed = true;
+      clearInterval(intervalId);
+    };
+  }
+
+  // 2. Lokalny fallback SSE dla środowiska deweloperskiego
+  try {
+    const eventSource = new EventSource(`${API_BASE}/api/progress/${recordingId}`);
+
+    eventSource.addEventListener("update", (event) => {
+      try {
+        const data: ProgressEventPayload = JSON.parse(event.data);
+        onUpdate(data);
+      } catch (e) {
+        console.error("Błąd parsowania zdarzenia SSE update", e);
+      }
+    });
+
+    eventSource.addEventListener("complete", (event) => {
+      try {
+        const data: ProgressEventPayload = JSON.parse(event.data);
+        onComplete(data);
+        eventSource.close();
+      } catch (e) {
+        console.error("Błąd parsowania zdarzenia SSE complete", e);
+      }
+    });
+
+    eventSource.onerror = (err) => {
+      if (onError) onError(err);
       eventSource.close();
-    } catch (e) {
-      console.error("Błąd parsowania zdarzenia SSE complete", e);
-    }
-  });
+    };
 
-  eventSource.onerror = (err) => {
-    if (onError) onError(err);
-    eventSource.close();
-  };
-
-  return () => {
-    eventSource.close();
-  };
+    return () => {
+      eventSource.close();
+    };
+  } catch (err) {
+    console.warn("Nie udało się utworzyć EventSource:", err);
+    return () => {};
+  }
 }
 
 export function getVideoUrl(recordingId: string): string {

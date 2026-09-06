@@ -116,14 +116,22 @@ export default function RecordingDetailPage() {
 
   if (error || !recording) {
     return (
-      <div className="p-8 bg-studio-card border border-red-500/40 rounded-xl text-slate-200">
-        <div className="text-red-400 text-sm font-bold mb-2 flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" /> Błąd wczytywania
+      <div className="p-8 bg-studio-card border border-red-500/40 rounded-xl text-slate-200 space-y-3">
+        <div className="text-red-400 text-sm font-bold flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4" /> Błąd wczytywania nagrania
         </div>
-        <p className="text-xs text-slate-400">{error || "Nagranie nie istnieje."}</p>
-        <Link href="/" className="inline-block mt-4 text-xs font-semibold text-cyan-400 hover:text-cyan-300 underline">
-          &larr; Wróć do bazy nagrań
-        </Link>
+        <p className="text-xs text-slate-300 font-mono leading-relaxed">{error || "Nagranie nie istnieje lub zostało usunięte."}</p>
+        <div className="flex items-center gap-4 pt-2">
+          <button
+            onClick={() => { setError(null); loadData(); }}
+            className="px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/50 rounded-lg text-xs font-semibold font-mono transition-colors"
+          >
+            Spróbuj ponownie
+          </button>
+          <Link href="/" className="text-xs font-semibold text-slate-400 hover:text-slate-200 underline">
+            &larr; Wróć do bazy nagrań
+          </Link>
+        </div>
       </div>
     );
   }
