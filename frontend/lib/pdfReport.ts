@@ -338,38 +338,68 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
   // GŁÓWNY SILNIK ATOMOWYCH KART RAPORTU (Atomic Card Engine)
   const renderAtomicCard = (opts: AtomicCardOptions) => {
     const paddingX = 14;
-    const paddingY = 10;
+    const paddingTop = 12;
+    const paddingBottom = 12;
     const usableWidth = contentWidth - paddingX * 2;
 
-    const badgeTextWidth = fontB.widthOfTextAtSize(opts.badgeLabel, 6.5);
-    const badgePillWidth = badgeTextWidth + 12;
+    const badgeFontSize = 7;
+    const badgeTextWidth = fontB.widthOfTextAtSize(opts.badgeLabel, badgeFontSize);
+    const badgePillWidth = badgeTextWidth + 14;
+    const badgeHeight = 15;
 
-    const titleLines = wrapText(opts.title, fontB, 9.5, usableWidth);
+    const titleFontSize = 9.5;
+    const titleLineHeight = 14;
+    const titleLines = wrapText(opts.title, fontB, titleFontSize, usableWidth);
+
+    const quoteFontSize = 8;
+    const quoteLineHeight = 12;
+    const quotePaddingY = 8;
     const quoteLines = opts.quote
-      ? wrapText(`„${opts.quote}”`, fontR, 8, usableWidth - 16)
+      ? wrapText(`„${opts.quote}”`, fontR, quoteFontSize, usableWidth - 18)
       : [];
-    const quoteBoxHeight = quoteLines.length > 0 ? 12 + quoteLines.length * 11 : 0;
+    const quoteBoxHeight =
+      quoteLines.length > 0 ? quotePaddingY * 2 + quoteLines.length * quoteLineHeight : 0;
 
+    const descFontSize = 8.5;
+    const descLineHeight = 13;
     const descLines = opts.description
-      ? wrapText(opts.description, fontR, 8.5, usableWidth)
+      ? wrapText(opts.description, fontR, descFontSize, usableWidth)
       : [];
-    const descHeight = descLines.length * 12;
+    const descHeight = descLines.length * descLineHeight;
 
+    const extraFontSize = 8;
+    const extraLineHeight = 12;
+    const extraPaddingY = 8;
     const extraLines = opts.extraBox
-      ? wrapText(`${opts.extraBox.label}: ${opts.extraBox.text}`, fontB, 8, usableWidth - 16)
+      ? wrapText(`${opts.extraBox.label}: ${opts.extraBox.text}`, fontB, extraFontSize, usableWidth - 18)
       : [];
-    const extraBoxHeight = extraLines.length > 0 ? 12 + extraLines.length * 11 : 0;
+    const extraBoxHeight =
+      extraLines.length > 0 ? extraPaddingY * 2 + extraLines.length * extraLineHeight : 0;
 
-    // Obliczenie całkowitej wysokości karty
-    let cardHeight = paddingY * 2;
-    cardHeight += 13; // wysokość badge'a
-    cardHeight += 5; // odstęp pod badgem
-    cardHeight += titleLines.length * 13; // tytuł
-    if (quoteBoxHeight > 0) cardHeight += quoteBoxHeight + 8;
-    if (descHeight > 0) cardHeight += descHeight + 6;
-    if (extraBoxHeight > 0) cardHeight += extraBoxHeight + 8;
+    // Precyzyjne wyliczenie całkowitej wysokości karty (z gwarantowanymi odstępami)
+    let cardHeight = paddingTop;
+    cardHeight += badgeHeight; // wysokość badge'a
+    cardHeight += 10; // wyraźny odstęp pod badgem (gapBadgeTitle)
+    cardHeight += titleLines.length * titleLineHeight; // wysokość bloku tytułu
 
-    // Sprawdzenie podziału strony przed narysowaniem karty
+    if (quoteBoxHeight > 0) {
+      cardHeight += 10; // odstęp przed cytatem
+      cardHeight += quoteBoxHeight; // wysokość bloku cytatu
+    }
+
+    if (descHeight > 0) {
+      cardHeight += 10; // odstęp przed opisem
+      cardHeight += descHeight; // wysokość bloku opisu
+    }
+
+    if (extraBoxHeight > 0) {
+      cardHeight += 10; // odstęp przed blokiem akcji/riposty
+      cardHeight += extraBoxHeight; // wysokość bloku akcji
+    }
+
+    cardHeight += paddingBottom;
+
+    // Sprawdzenie podziału strony przed narysowaniem karty (Keep together)
     if (y - cardHeight < bottomMargin) {
       page = addReportPage();
     }
@@ -394,45 +424,51 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
       color: opts.accentColor,
     });
 
-    let curY = y - paddingY;
+    // 1. Rysowanie Badge Pill (ze stuprocentową izolacją pionową)
+    const badgeTop = y - paddingTop;
+    const badgeBottom = badgeTop - badgeHeight;
 
-    // Badge pill
     page.drawRectangle({
       x: margin + paddingX,
-      y: curY - 13,
+      y: badgeBottom,
       width: badgePillWidth,
-      height: 13,
+      height: badgeHeight,
       color: opts.badgeBg,
     });
 
     page.drawText(opts.badgeLabel, {
-      x: margin + paddingX + 6,
-      y: curY - 9.5,
-      size: 6.5,
+      x: margin + paddingX + 7,
+      y: badgeBottom + 4.5,
+      size: badgeFontSize,
       font: fontB,
       color: opts.badgeFg,
     });
 
-    curY -= 13 + 6;
+    // 2. Rysowanie Tytułu (dokładnie 10 pt poniżej dolnej krawędzi badge'a)
+    const titleTop = badgeBottom - 10;
+    let curLineBaseline = titleTop - 10;
 
-    // Tytuł w sentence case
     for (const line of titleLines) {
       page.drawText(line, {
         x: margin + paddingX,
-        y: curY,
-        size: 9.5,
+        y: curLineBaseline,
+        size: titleFontSize,
         font: fontB,
         color: rgb(0.08, 0.12, 0.2),
       });
-      curY -= 13;
+      curLineBaseline -= titleLineHeight;
     }
 
-    // Pudełko cytatu
-    if (quoteLines.length > 0) {
-      curY -= 4;
+    let nextContentTop = titleTop - titleLines.length * titleLineHeight;
+
+    // 3. Rysowanie Pudełka Cytatu (jeśli występuje)
+    if (quoteBoxHeight > 0) {
+      const quoteTop = nextContentTop - 10;
+      const quoteBottom = quoteTop - quoteBoxHeight;
+
       page.drawRectangle({
         x: margin + paddingX,
-        y: curY - quoteBoxHeight + 2,
+        y: quoteBottom,
         width: usableWidth,
         height: quoteBoxHeight,
         color: rgb(0.93, 0.95, 0.97),
@@ -440,46 +476,54 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
 
       page.drawRectangle({
         x: margin + paddingX,
-        y: curY - quoteBoxHeight + 2,
-        width: 2,
+        y: quoteBottom,
+        width: 2.5,
         height: quoteBoxHeight,
         color: opts.accentColor,
       });
 
-      let qY = curY - 9;
+      let qBaseline = quoteTop - quotePaddingY - 8.5;
       for (const ql of quoteLines) {
         page.drawText(ql, {
-          x: margin + paddingX + 8,
-          y: qY,
-          size: 8,
+          x: margin + paddingX + 9,
+          y: qBaseline,
+          size: quoteFontSize,
           font: fontR,
           color: rgb(0.25, 0.3, 0.38),
         });
-        qY -= 11;
+        qBaseline -= quoteLineHeight;
       }
-      curY -= quoteBoxHeight + 6;
+
+      nextContentTop = quoteBottom;
     }
 
-    // Opis / dekonstrukcja
+    // 4. Rysowanie Opisu / Dekonstrukcji (jeśli występuje)
     if (descLines.length > 0) {
+      const descTop = nextContentTop - 10;
+      let dBaseline = descTop - 9;
+
       for (const dl of descLines) {
         page.drawText(dl, {
           x: margin + paddingX,
-          y: curY,
-          size: 8.5,
+          y: dBaseline,
+          size: descFontSize,
           font: fontR,
           color: rgb(0.18, 0.23, 0.31),
         });
-        curY -= 12;
+        dBaseline -= descLineHeight;
       }
-      curY -= 4;
+
+      nextContentTop = descTop - descLines.length * descLineHeight;
     }
 
-    // Blok akcji / riposty / zalecenia
-    if (extraLines.length > 0 && opts.extraBox) {
+    // 5. Rysowanie Bloku Akcji / Riposty / Zalecenia (jeśli występuje)
+    if (extraBoxHeight > 0 && opts.extraBox) {
+      const extraTop = nextContentTop - 10;
+      const extraBottom = extraTop - extraBoxHeight;
+
       page.drawRectangle({
         x: margin + paddingX,
-        y: curY - extraBoxHeight + 2,
+        y: extraBottom,
         width: usableWidth,
         height: extraBoxHeight,
         color: opts.extraBox.bgColor,
@@ -488,29 +532,30 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
       if (opts.extraBox.accentBar) {
         page.drawRectangle({
           x: margin + paddingX,
-          y: curY - extraBoxHeight + 2,
-          width: 2,
+          y: extraBottom,
+          width: 2.5,
           height: extraBoxHeight,
           color: opts.extraBox.accentBar,
         });
       }
 
-      let eY = curY - 9;
+      let eBaseline = extraTop - extraPaddingY - 8.5;
       for (const el of extraLines) {
         page.drawText(el, {
-          x: margin + paddingX + 8,
-          y: eY,
-          size: 8,
+          x: margin + paddingX + 9,
+          y: eBaseline,
+          size: extraFontSize,
           font: fontB,
           color: opts.extraBox.textColor,
         });
-        eY -= 11;
+        eBaseline -= extraLineHeight;
       }
-      curY -= extraBoxHeight + 4;
+
+      nextContentTop = extraBottom;
     }
 
     // Odstęp między kartami
-    y -= cardHeight + 10;
+    y -= cardHeight + 12;
   };
 
   // 3. SYNTEZA BEHAWIORALNA I POSTAWA KOMUNIKACYJNA
