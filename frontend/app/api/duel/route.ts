@@ -184,9 +184,13 @@ Zwróć kompletny werdykt w formacie JSON.`,
     if (!geminiRes.ok) {
       const errBody = await geminiRes.text();
       console.error("Błąd API Gemini podczas syntezy pojedynku:", geminiRes.status, errBody);
+      let userMsg = "Nie udało się wygenerować werdyktu starcia przez silnik AI.";
+      if (errBody.includes("API_KEY_INVALID") || errBody.includes("API key not valid") || geminiRes.status === 400) {
+        userMsg = "Brak ważnego klucza API dla silnika AI. Wprowadź swój bezpłatny klucz z Google AI Studio w profilu lub przy logowaniu.";
+      }
       return NextResponse.json(
-        { detail: `Błąd silnika AI (${geminiRes.status}): Nie udało się wygenerować werdyktu starcia.` },
-        { status: 502 }
+        { detail: userMsg },
+        { status: geminiRes.status }
       );
     }
 

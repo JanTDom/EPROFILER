@@ -155,8 +155,12 @@ ${forensicContext}
     if (!geminiRes.ok) {
       const errText = await geminiRes.text();
       console.error("Błąd API Gemini podczas czatu:", geminiRes.status, errText);
+      let userMsg = "Wystąpił błąd podczas generowania odpowiedzi przez silnik AI.";
+      if (errText.includes("API_KEY_INVALID") || errText.includes("API key not valid") || geminiRes.status === 400) {
+        userMsg = "Brak ważnego klucza API dla silnika AI. Wprowadź swój bezpłatny klucz z Google AI Studio w profilu lub przy logowaniu.";
+      }
       return NextResponse.json(
-        { detail: `Błąd silnika AI (${geminiRes.status}): ${errText.slice(0, 300)}` },
+        { detail: userMsg },
         { status: geminiRes.status }
       );
     }
