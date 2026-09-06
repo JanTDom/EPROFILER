@@ -14,7 +14,8 @@ import {
   ExternalLink,
   Sparkles,
   ShieldCheck,
-  ArrowLeft
+  ArrowLeft,
+  Info
 } from 'lucide-react';
 
 function LoginForm() {
@@ -237,16 +238,38 @@ function LoginForm() {
             </p>
           </div>
 
-          {/* PRZEWODNIK KROK PO KROKU */}
+          {/* Przewodnik krok po kroku */}
           <div className="p-4 bg-[#0a0f1d] border border-cyan-500/40 rounded-xl space-y-3 shadow-lg">
             <div className="flex items-center justify-between gap-2 border-b border-cyan-900/40 pb-2">
               <span className="text-xs font-bold text-cyan-300 flex items-center gap-1.5 font-mono">
                 <Sparkles className="w-4 h-4 text-cyan-400" />
-                <span>JAK BEZPŁATNIE POBRAĆ KLUCZ W 60 SEKUND?</span>
+                <span>Jak pobrać klucz w Google AI Studio?</span>
               </span>
               <span className="text-[9px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 border border-emerald-600/40 rounded">
-                100% BEZPŁATNE
+                Darmowe lub płatne
               </span>
+            </div>
+
+            {/* Dwie opcje korzystania z API */}
+            <div className="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2 text-xs">
+              <span className="font-bold text-slate-200 flex items-center gap-1.5 text-[11px]">
+                <Info className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+                <span>Dwie opcje API do wyboru w Google AI Studio:</span>
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] leading-relaxed">
+                <div className="p-2.5 bg-[#070b14] border border-emerald-500/30 rounded-lg space-y-1">
+                  <strong className="text-emerald-400 block font-mono text-[10px] uppercase">1. Opcja darmowa (bez karty)</strong>
+                  <p className="text-slate-400 text-[10px] leading-normal">
+                    100% bezpłatna, 15 zapytań/min, brak opłat i karty. Wystarcza do bieżących analiz wywiadów.
+                  </p>
+                </div>
+                <div className="p-2.5 bg-[#070b14] border border-cyan-500/30 rounded-lg space-y-1">
+                  <strong className="text-cyan-400 block font-mono text-[10px] uppercase">2. Opcja płatna (Pay-as-you-go)</strong>
+                  <p className="text-slate-400 text-[10px] leading-normal">
+                    Z kartą w Google Cloud: grosze za analizę, brak limitów i 100% gwarancji poufności danych.
+                  </p>
+                </div>
+              </div>
             </div>
 
             <ol className="text-xs text-slate-300 space-y-2.5 list-none">
@@ -283,13 +306,11 @@ function LoginForm() {
               <li className="flex items-start gap-2">
                 <span className="w-4 h-4 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 font-mono text-[10px] flex items-center justify-center font-bold flex-shrink-0 mt-0.5">3</span>
                 <div>
-                  <span>W okienku, które wyskoczy, wybierz opcję:</span>
-                  <div className="mt-1 p-1.5 bg-slate-900 border border-slate-800 rounded text-cyan-300 font-mono text-[11px]">
-                    👉 "Create API key in new project"
+                  <span>W okienku, które wyskoczy, wybierz typ projektu:</span>
+                  <div className="mt-1 p-2 bg-slate-900 border border-slate-800 rounded text-cyan-300 font-mono text-[11px] space-y-1">
+                    <div>👉 <strong>Dla opcji darmowej:</strong> wybierz <em>"Create API key in new project"</em> (bez karty).</div>
+                    <div>👉 <strong>Dla opcji płatnej:</strong> wskaż projekt z Google Cloud Billing.</div>
                   </div>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
-                    Nie musisz niczego konfigurować ani podawać karty płatniczej.
-                  </p>
                 </div>
               </li>
 
