@@ -163,12 +163,12 @@ Zwróć kompletny werdykt w formacie JSON.`,
           ],
         },
       ],
-      systemInstruction: {
+      system_instruction: {
         parts: [{ text: systemPrompt }],
       },
       generationConfig: {
         temperature: 0.25,
-        responseMimeType: "application/json",
+        response_mime_type: "application/json",
       },
     };
 

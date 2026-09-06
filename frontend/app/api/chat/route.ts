@@ -133,13 +133,13 @@ ${forensicContext}
     }));
 
     const geminiPayload = {
-      systemInstruction: {
+      system_instruction: {
         parts: [{ text: systemInstruction }],
       },
       contents,
       generationConfig: {
         temperature: 0.35,
-        maxOutputTokens: 2048,
+        max_output_tokens: 2048,
       },
     };
 
@@ -156,7 +156,7 @@ ${forensicContext}
       const errText = await geminiRes.text();
       console.error("Błąd API Gemini podczas czatu:", geminiRes.status, errText);
       return NextResponse.json(
-        { detail: `Błąd silnika AI (${geminiRes.status}): Upewnij się, że klucz API jest prawidłowy.` },
+        { detail: `Błąd silnika AI (${geminiRes.status}): ${errText.slice(0, 300)}` },
         { status: geminiRes.status }
       );
     }
