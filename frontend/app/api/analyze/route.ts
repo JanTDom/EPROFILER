@@ -8,19 +8,19 @@ const SYSTEM_GEMINI_KEY = process.env.GEMINI_API_KEY || "";
 
 const SYSTEM_INSTRUCTION = `Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu E-PROFILER.
 Twoim celem jest rzetelny, krytyczny audyt wystąpienia publicznego osoby badanej (polityka, gościa, osoby diagnozowanej).
-Z kontekstu rozmowy, powitań, zapowiedzi i zadawanych pytań ZAWSZE automatycznie rozpoznajesz, kto jest dziennikarzem/prowadzącym, a kto osobą diagnozowaną. Twój audyt dotyczy wyłącznie osoby diagnozowanej.
+Z kontekstu rozmowy, powitań, zapowiedzi i zadawanych pytań zawsze automatycznie rozpoznajesz, kto jest dziennikarzem/prowadzącym, a kto osobą diagnozowaną. Twój audyt dotyczy wyłącznie osoby diagnozowanej.
 Nie tworzysz laurki ani pochlebstw — polityk i jego sztab potrzebują twardych, użytecznych ostrzeżeń, dekonstrukcji błędów oraz praktycznych wskazówek warsztatowych.
 
-OBOWIĄZUJĄ CIĘ ZASADY AUDYTU SZTABOWEGO I SPIN DOCTORINGU:
-1. IDENTYFIKACJA OSOBY DIAGNOZOWANEJ Z KONTEKSTU: Zawsze na podstawie dynamiki wywiadu, zapowiedzi i powitań („Naszym gościem jest...”, „Panie Pośle/Ministrze/Premierze...”) precyzyjnie identyfikuj badanego gościa i to na nim skupiaj cały audyt.
-2. CZUJNOŚĆ NA WYCIEKI EMOCJONALNE I NIEWERBALNE: Z całą surowością wychwytujesz emocje niedopuszczalne u lidera (irytacja, zniecierpliwienie, protekcjonalizm, uśmieszki wyższości i pogardy AU14, bezradność, nerwowość głosu, defensywne ucinanie wątków).
-3. DEKONSTRUKCJA NIELOGICZNOŚCI I PUSTOSŁOWIA: Punktujesz luki logiczne, brak ciągu przyczynowo-skutkowego, obietnice bez mechanizmu sprawczego, wewnętrzne sprzeczności oraz nieudolne próby ucieczki od odpowiedzi (toporny bridging).
-4. ANALIZA POWIERZCHNI ATAKU (AMUNICJA DLA OPONENTÓW): Identyfikujesz niefortunne sformułowania i tzw. 'samobóje', które sztaby konkurencji wytną na rolki, paski i spoty jako dowód słabości lub nieszczerości.
-5. WARSZTAT WYSTĄPIEŃ I DYKCJA: Oceniasz tempo mowy, intonację (unikanie intonacji pytającej przy twierdzeniach), pauzy retoryczne i natrętne wypełniacze.
-6. SKRYPTY NAPRAWCZE: Każdy zdiagnozowany błąd musi mieć gotowy szablon naprawczy ('Zamiast: X -> Mów: Y').
-7. KALIBRACJA OCENY: Kompresuj oceny ku środkowi skali (na skali 1-10 unikaj skrajności 1 czy 10; realistyczne, krytyczne wystąpienia pod presją mieszczą się typowo w przedziale 4-7/10).
-8. ZWIĘZŁOŚĆ I GĘSTOŚĆ INFORMACYJNA: Wszystkie opisy i uzasadnienia formułuj zwięźle, esencjonalnie, unikając rozwlekłości.
-9. FORMAT JĘZYKOWY: Pisz czystą polszczyzną w sentence case (tylko pierwsza litera zdania wielka). Odpowiadaj wyłącznie poprawnym JSON-em.`;
+Obowiązują cię zasady audytu sztabowego i spin doctoringu:
+1. Identyfikacja osoby diagnozowanej z kontekstu: Zawsze na podstawie dynamiki wywiadu, zapowiedzi i powitań („Naszym gościem jest...”, „Panie pośle/ministrze/premierze...”) precyzyjnie identyfikuj badanego gościa i to na nim skupiaj cały audyt.
+2. Czujność na wycieki emocjonalne i niewerbalne: Z całą surowością wychwytujesz emocje niedopuszczalne u lidera (irytacja, zniecierpliwienie, protekcjonalizm, uśmieszki wyższości i pogardy AU14, bezradność, nerwowość głosu, defensywne ucinanie wątków).
+3. Dekonstrukcja nielogiczności i pustosłowia: Punktujesz luki logiczne, brak ciągu przyczynowo-skutkowego, obietnice bez mechanizmu sprawczego, wewnętrzne sprzeczności oraz nieudolne próby ucieczki od odpowiedzi (toporny bridging).
+4. Analiza powierzchni ataku (amunicja dla oponentów): Identyfikujesz niefortunne sformułowania i tzw. 'samobóje', które sztaby konkurencji wytną na rolki, paski i spoty jako dowód słabości lub nieszczerości.
+5. Warsztat wystąpień i dykcja: Oceniasz tempo mowy, intonację (unikanie intonacji pytającej przy twierdzeniach), pauzy retoryczne i natrętne wypełniacze.
+6. Skrypty naprawcze: Każdy zdiagnozowany błąd musi mieć gotowy szablon naprawczy ('Zamiast: X -> Mów: Y').
+7. Kalibracja oceny: Kompresuj oceny ku środkowi skali (na skali 1-10 unikaj skrajności 1 czy 10; realistyczne, krytyczne wystąpienia pod presją mieszczą się typowo w przedziale 4-7/10).
+8. Zwięzłość i gęstość informacyjna: Wszystkie opisy i uzasadnienia formułuj zwięźle, esencjonalnie, unikając rozwlekłości.
+9. Format językowy: Pisz czystą polszczyzną w sentence case (tylko pierwsza litera zdania wielka). Odpowiadaj wyłącznie poprawnym JSON-em.`;
 
 export async function POST(request: Request) {
   try {
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
     let publicationDate: string | null = null;
     let enableBiometrics = true;
     let customApiKeyParam: string | null = null;
+    let formatMaterialuParam: string | null = null;
 
     if (isMultipart) {
       const formData = await request.formData();
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
       publicationDate = (formData.get("data_publikacji") as string) || null;
       enableBiometrics = formData.get("tryb_biometryczny") !== "false";
       customApiKeyParam = (formData.get("gemini_api_key") as string) || null;
+      formatMaterialuParam = (formData.get("format_materialu") as string) || null;
     } else {
       const body = await request.json();
       rawUrl = body.url || null;
@@ -64,7 +66,15 @@ export async function POST(request: Request) {
       publicationDate = body.data_publikacji || null;
       enableBiometrics = body.tryb_biometryczny ?? true;
       customApiKeyParam = body.gemini_api_key || null;
+      formatMaterialuParam = body.format_materialu || null;
     }
+
+    const rawMime = uploadedFile ? (uploadedFile.type || "").toLowerCase() : "";
+    const fileName = uploadedFile ? uploadedFile.name.toLowerCase() : "";
+    const isAudioFile = rawMime.startsWith("audio/") ||
+      /\.(mp3|wav|m4a|aac|ogg|flac|opus|wma)$/i.test(fileName);
+    const isAudio = formatMaterialuParam === "audio" || isAudioFile;
+    const formatMaterialuFinal: "wideo" | "audio" = isAudio ? "audio" : "wideo";
 
     if (!rawUrl && !uploadedFile) {
       return NextResponse.json(
@@ -96,16 +106,17 @@ export async function POST(request: Request) {
       id: recordingId,
       zrodlo_typ: uploadedFile ? "plik" : "url",
       zrodlo_url: cleanUrl || null,
-      tytul: title || (cleanUrl ? `Nagranie (${cleanUrl.slice(0, 40)}...)` : `Przechwycenie VOD (${new Date().toLocaleDateString()})`),
+      tytul: title || (cleanUrl ? `Nagranie (${cleanUrl.slice(0, 40)}...)` : isAudio ? `Nagranie audio (${new Date().toLocaleDateString()})` : `Przechwycenie VOD (${new Date().toLocaleDateString()})`),
       data_publikacji: publicationDate,
       czas_trwania_sek: 0,
       typ_nagrania: recordingType,
       status_przetwarzania: "PROFILOWANIE_AI",
-      krok_postepu: "Wykonywanie analizy behawioralnej, intencji i retoryki...",
+      krok_postepu: isAudio ? "Wykonywanie analizy akustycznej głosu, intencji i retoryki..." : "Wykonywanie analizy behawioralnej, intencji i retoryki...",
       procent_postepu: 50,
       profile_id: profileId,
       polityk_docelowy: targetPerson,
       rola_polityka: politicianRole,
+      format_materialu: formatMaterialuFinal,
       tryb_biometryczny: enableBiometrics,
       zakres_analizy: scope,
       rozpoznani_mowcy: [],
@@ -124,23 +135,37 @@ export async function POST(request: Request) {
       body: JSON.stringify(initialRec),
     });
 
-    // 2. Zapytanie bezpośrednie do Gemini 3.6 Flash z multimodalnym YouTube URL
+    // 2. Zapytanie bezpośrednie do Gemini 3.6 Flash z multimodalnym YouTube URL lub plikiem
     const targetInfo = targetPerson
       ? `Główny cel profilowania wskazany przez użytkownika: ${targetPerson}.`
-      : "KLUCZOWA ZASADA — IDENTYFIKACJA OSOBY DIAGNOZOWANEJ Z KONTEKSTU: Z powitań, zapowiedzi redakcyjnych („W studiu gościmy...”, „Naszym gościem jest...”), zwrotów formalnych („Panie Pośle/Ministrze/Premierze...”) oraz dynamiki pytań i odpowiedzi bezbłędnie wywnioskuj z kontekstu rozmowy, kim jest badany gość / polityk / ekspert (osoba diagnozowana). Oznacz go jako 'jest_celem': true.";
+      : "Kluczowa zasada — identyfikacja osoby diagnozowanej z kontekstu: Z powitań, zapowiedzi redakcyjnych („W studiu gościmy...”, „Naszym gościem jest...”), zwrotów formalnych („Panie pośle/ministrze/premierze...”) oraz dynamiki pytań i odpowiedzi bezbłędnie wywnioskuj z kontekstu rozmowy, kim jest badany gość / polityk / ekspert (osoba diagnozowana). Oznacz go jako 'jest_celem': true.";
 
-    const promptText = `Obejrzyj i przeanalizuj to nagranie wideo. ${targetInfo}
-ZAKRES PROFILOWANIA: ${scope === "pelny" ? "PEŁNY AUDYT SZTABOWY (psychologia, mowa ciała, nielogiczności, marketing polityczny, warsztat)" : "TYLKO STAN PSYCHICZNY I BEHAWIORALNY"}.
+    const promptText = isAudio
+      ? `Przesłuchaj i przeanalizuj to nagranie dźwiękowe / audio (podcast, wywiad radiowy, nagranie z dyktafonu lub telefonu). ${targetInfo}
+Zakres profilowania: ${scope === "pelny" ? "Pełny audyt sztabowy głosu i retoryki (psychologia głosu, prozodia, nielogiczności, marketing polityczny, warsztat)" : "Tylko stan psychiczny i akustyka głosu"}.
 
-ZASADY AUDYTU SZTABOWEGO:
-1. ZROZUMIENIE I FOCUS NA OSOBIE DIAGNOZOWANEJ: Rozróżnij dziennikarza/prowadzącego od OSOBY DIAGNOZOWANEJ. Cały profil, werdykt, błędy, uniki, ocena i mowa ciała MUSZĄ dotyczyć wyłącznie OSOBY DIAGNOZOWANEJ!
-2. BEZWZGLĘDNA CZUJNOŚĆ I BRAK TARYFY ULGOWEJ: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach.
-3. DETEKCJA NIEPOŻĄDANYCH EMOCJI: Wskaż momenty irytacji, protekcjonalizmu, uśmieszków wyższości (AU14) czy bezradności.
-4. DETEKCJA NIELOGICZNOŚCI I LUK W ARGUMENTACJI: Wskaż sprzeczności wewnętrzne i uniki.
-5. AMUNICJA DLA OPONENTÓW: Wskaż sformułowania tzw. 'samobóje'.
-6. SKRYPTY KOREKCYJNE: Do błędów podaj gotową ripostę („Zamiast X -> Mów Y”).
-7. KALIBRACJA OCENY: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
-8. FORMAT JĘZYKOWY: Sentence case, czysta polszczyzna, zwięzłość, odpowiedź wyłącznie poprawnym JSON-em.
+Specjalne wytyczne dla nagrania audio:
+1. Brak obrazu wideo: To nagranie jest wyłącznie ścieżką dźwiękową. Kategorycznie nie wymyślaj ani nie halucynuj mimiki twarzy, jednostek FACS (AU1, AU4, AU12 itp.), kontaktu wzrokowego ani ruchów ciała!
+2. Prozodia i akustyka głosu: W sekcji 'niepozadane_emocje_i_mowa_ciala' opisz wyłącznie wycieki emocjonalne w głosie: nagłe skoki wysokości tonu (F0), załamania głosu, drżenie (pitch jitter/shimmer), spłycenie oddechu, spięcie krtani, nerwowy chichot, agresywną intonację, defensywne ucinanie wypowiedzi, zniecierpliwienie i protekcjonalny ton.
+3. Zrozumienie i focus na osobie diagnozowanej: Rozróżnij dziennikarza/prowadzącego od osoby diagnozowanej. Cały profil, werdykt, błędy, uniki, ocena i analiza głosu muszą dotyczyć wyłącznie osoby diagnozowanej!
+4. Bezwzględna czujność i brak taryfy ulgowej: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach.
+5. Detekcja nielogiczności i luk w argumentacji: Wskaż sprzeczności wewnętrzne, uniki i brak logiki.
+6. Amunicja dla oponentów: Wskaż sformułowania tzw. 'samobóje'.
+7. Skrypty korekcyjne: Do błędów podaj gotową ripostę („Zamiast X -> Mów Y”).
+8. Kalibracja oceny: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
+9. Format językowy: Sentence case (tylko pierwsza litera zdania wielka), czysta polszczyzna, zwięzłość, odpowiedź wyłącznie poprawnym JSON-em.`
+      : `Obejrzyj i przeanalizuj to nagranie wideo. ${targetInfo}
+Zakres profilowania: ${scope === "pelny" ? "Pełny audyt sztabowy (psychologia, mowa ciała, nielogiczności, marketing polityczny, warsztat)" : "Tylko stan psychiczny i behawioralny"}.
+
+Zasady audytu sztabowego:
+1. Zrozumienie i focus na osobie diagnozowanej: Rozróżnij dziennikarza/prowadzącego od osoby diagnozowanej. Cały profil, werdykt, błędy, uniki, ocena i mowa ciała muszą dotyczyć wyłącznie osoby diagnozowanej!
+2. Bezwzględna czujność i brak taryfy ulgowej: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach.
+3. Detekcja niepożądanych emocji: Wskaż momenty irytacji, protekcjonalizmu, uśmieszków wyższości (AU14) czy bezradności.
+4. Detekcja nielogiczności i luk w argumentacji: Wskaż sprzeczności wewnętrzne i uniki.
+5. Amunicja dla oponentów: Wskaż sformułowania tzw. 'samobóje'.
+6. Skrypty korekcyjne: Do błędów podaj gotową ripostę („Zamiast X -> Mów Y”).
+7. Kalibracja oceny: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
+8. Format językowy: Sentence case, czysta polszczyzna, zwięzłość, odpowiedź wyłącznie poprawnym JSON-em.
 
 Zwróć poprawny JSON o schemacie:
 {
@@ -232,8 +257,17 @@ Zwróć poprawny JSON o schemacie:
     if (uploadedFile) {
       const arrayBuffer = await uploadedFile.arrayBuffer();
       const base64Data = Buffer.from(arrayBuffer).toString("base64");
-      const rawMime = uploadedFile.type || "video/webm";
-      const mimeType = rawMime.split(";")[0].trim() || "video/webm";
+      let mimeType = (uploadedFile.type || "").split(";")[0].trim();
+      if (!mimeType || mimeType === "application/octet-stream") {
+        if (/\.mp3$/i.test(fileName)) mimeType = "audio/mp3";
+        else if (/\.wav$/i.test(fileName)) mimeType = "audio/wav";
+        else if (/\.m4a$/i.test(fileName)) mimeType = "audio/m4a";
+        else if (/\.aac$/i.test(fileName)) mimeType = "audio/aac";
+        else if (/\.ogg$/i.test(fileName)) mimeType = "audio/ogg";
+        else if (/\.flac$/i.test(fileName)) mimeType = "audio/flac";
+        else if (/\.opus$/i.test(fileName)) mimeType = "audio/opus";
+        else mimeType = isAudio ? "audio/mp3" : "video/webm";
+      }
       mediaPart = {
         inline_data: {
           mime_type: mimeType,
@@ -330,7 +364,11 @@ Zwróć poprawny JSON o schemacie:
       }
     }
 
-    const fallbackTitle = cleanUrl ? `Wywiad: ${diagnosedPolitician || cleanUrl.slice(0, 30)}` : `Przechwycenie: ${diagnosedPolitician || "Nagranie VOD"}`;
+    const fallbackTitle = cleanUrl
+      ? `Wywiad: ${diagnosedPolitician || cleanUrl.slice(0, 30)}`
+      : isAudio
+      ? `Nagranie audio: ${diagnosedPolitician || "Podcast / wywiad radiowy"}`
+      : `Przechwycenie: ${diagnosedPolitician || "Nagranie VOD"}`;
     const videoTitle = analysis.tytul_wideo || title || fallbackTitle;
     const duration = analysis.czas_trwania_sek || 600;
 
@@ -379,8 +417,9 @@ Zwróć poprawny JSON o schemacie:
       polityk_docelowy: diagnosedPolitician,
       speaker_docelowy_tag: selectedSpeakerTag,
       rozpoznani_mowcy: speakers,
+      format_materialu: formatMaterialuFinal,
       status_przetwarzania: "ZAKONCZONE",
-      krok_postepu: "Analiza behawioralna i profilowanie zakończone sukcesem.",
+      krok_postepu: isAudio ? "Analiza akustyczna głosu i profilowanie zakończone sukcesem." : "Analiza behawioralna i profilowanie zakończone sukcesem.",
       procent_postepu: 100,
       blad: null,
       updated_at: new Date().toISOString(),

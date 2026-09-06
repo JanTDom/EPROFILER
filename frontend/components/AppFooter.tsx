@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LegalNotice } from "@/components/LegalNotice";
 
@@ -28,7 +29,12 @@ export const AppFooter: React.FC = () => {
               Multinewsroom (multinewsroom.pl)
             </a>
           </span>
-          <span className="text-cyan-500/80">NEURAL CORE AI • EKMAN FACS • PRAAT DSP • WHISPERX</span>
+          <div className="flex items-center gap-4">
+            <Link href="/help" className="text-cyan-400 hover:text-cyan-300 underline transition-colors">
+              Instrukcja obsługi
+            </Link>
+            <span className="text-cyan-500/80 hidden sm:inline">NEURAL CORE AI • EKMAN FACS • PRAAT DSP • WHISPERX</span>
+          </div>
         </div>
       </div>
     </footer>

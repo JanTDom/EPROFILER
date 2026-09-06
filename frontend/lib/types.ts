@@ -42,6 +42,7 @@ export interface Recording {
   polityk_docelowy?: string;
   rola_polityka?: string;
   speaker_docelowy_tag?: string;
+  format_materialu?: "wideo" | "audio";
   rozpoznani_mowcy?: DetectedSpeaker[];
   psychometric_profile?: PsychometricProfile;
   created_at: string;

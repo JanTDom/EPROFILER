@@ -7,6 +7,7 @@ import { fetchRecording, setTargetSpeaker, retryRecording, getRecordingPdfUrl } 
 import { Recording, DetectedSpeaker } from "@/lib/types";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import { VideoPlayer } from "@/components/VideoPlayer";
+import { AudioPlayer } from "@/components/AudioPlayer";
 import { LegalNotice } from "@/components/LegalNotice";
 import { DeleteRecordingButton } from "@/components/DeleteRecordingButton";
 import { ForensicChat } from "@/components/ForensicChat";
@@ -37,6 +38,7 @@ import {
   Target,
   Compass,
   Swords,
+  Mic,
 } from "lucide-react";
 
 export default function RecordingDetailPage() {
@@ -223,12 +225,17 @@ export default function RecordingDetailPage() {
                   Zakres: pełny 360° (zachowanie, perswazja, starcie)
                 </span>
               )}
-              {recording.tryb_biometryczny !== false && (
+              {recording.format_materialu === "audio" ? (
+                <span className="text-[10px] font-mono text-amber-300 bg-amber-950/40 px-2.5 py-0.5 border border-amber-500/40 rounded-full flex items-center gap-1">
+                  <Mic className="w-3 h-3 text-amber-400" />
+                  Format: audio / podcast
+                </span>
+              ) : recording.tryb_biometryczny !== false ? (
                 <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/40 px-2.5 py-0.5 border border-cyan-500/30 rounded-full flex items-center gap-1">
                   <Eye className="w-3 h-3 text-cyan-400" />
                   Biometria i mimika FACS
                 </span>
-              )}
+              ) : null}
             </div>
             <h1 className="text-2xl font-black tracking-tight text-white">
               {recording.tytul}
@@ -379,16 +386,33 @@ export default function RecordingDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           {isReady ? (
             <div id="video-player-container" className="scroll-mt-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
-                  <Eye className="w-3.5 h-3.5 text-cyan-400" />
-                  Podgląd wideo z inspektorem mikroekspresji
-                </span>
-                <span className="text-[11px] text-slate-500 font-mono">
-                  Użyj 0.25x do wykrywania ułamkowych grymasów twarzy
-                </span>
-              </div>
-              <VideoPlayer recordingId={recording.id} seekToTimeSec={seekToTimeSec} />
+              {recording.format_materialu === "audio" ? (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                      <Mic className="w-3.5 h-3.5 text-cyan-400" />
+                      Ścieżka dźwiękowa z analizatorem prozodii i drżenia głosu
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      Tryb analizy akustycznej: fale F0, stabilność fonacji i intonacja
+                    </span>
+                  </div>
+                  <AudioPlayer recordingId={recording.id} seekToTimeSec={seekToTimeSec} />
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                      Podgląd wideo z inspektorem mikroekspresji
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-mono">
+                      Użyj 0.25x do wykrywania ułamkowych grymasów twarzy
+                    </span>
+                  </div>
+                  <VideoPlayer recordingId={recording.id} seekToTimeSec={seekToTimeSec} />
+                </>
+              )}
             </div>
           ) : recording.status_przetwarzania === "BLAD" ? (
             <div className="aspect-video bg-studio-card/95 border border-red-500/50 rounded-2xl flex flex-col items-center justify-center text-center p-6 text-slate-300 shadow-2xl backdrop-blur-xl">

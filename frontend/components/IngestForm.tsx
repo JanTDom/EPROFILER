@@ -23,7 +23,8 @@ import {
   CheckCircle2,
   Info,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Mic
 } from "lucide-react";
 import { createRecordingFromUrl, uploadRecordingFile, sanitizeVideoUrl } from "@/lib/api";
 import { RecordingType } from "@/lib/types";
@@ -187,10 +188,12 @@ export const IngestForm: React.FC = () => {
         router.push(`/recordings/${created.id}`);
       } else if (tab === "file") {
         if (!selectedFile) {
-          throw new Error("Wybierz plik wideo z dysku.");
+          throw new Error("Wybierz plik wideo lub audio z dysku.");
         }
+        const isAudio = selectedFile.type.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg|flac|opus|wma)$/i.test(selectedFile.name);
         const formData = new FormData();
         formData.append("file", selectedFile);
+        formData.append("format_materialu", isAudio ? "audio" : "wideo");
         if (title.trim()) formData.append("tytul", title.trim());
         formData.append("typ_nagrania", recordingType);
         if (publicationDate) formData.append("data_publikacji", publicationDate);
@@ -295,7 +298,7 @@ export const IngestForm: React.FC = () => {
           }`}
         >
           <Upload className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Plik z dysku</span>
+          <span>Plik (wideo / audio)</span>
         </button>
 
         <button
@@ -320,7 +323,7 @@ export const IngestForm: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* ZAKŁADKA 1: LINK URL */}
+        {/* Zakładka 1: Link URL */}
         {tab === "url" && (
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
@@ -338,19 +341,52 @@ export const IngestForm: React.FC = () => {
           </div>
         )}
 
-        {/* ZAKŁADKA 2: PLIK Z DYSKU */}
+        {/* Zakładka 2: Plik z dysku (wideo lub audio) */}
         {tab === "file" && (
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Wybierz plik wideo *
-            </label>
-            <input
-              type="file"
-              required
-              accept="video/mp4,video/quicktime,video/webm,video/x-matroska"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              className="w-full px-3.5 py-2.5 text-xs bg-[#0b101b] border border-slate-700/80 rounded-lg text-slate-200 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer focus:outline-none focus:border-cyan-400 transition-all"
-            />
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+                <span>Wybierz plik z dysku (wideo lub audio) *</span>
+                <span className="text-[10px] text-slate-500 font-mono">MP4, WEBM, MOV, MP3, WAV, M4A, OGG, FLAC</span>
+              </label>
+              <input
+                type="file"
+                required
+                accept="video/*,audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.opus,.wma"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                className="w-full px-3.5 py-2.5 text-xs bg-[#0b101b] border border-slate-700/80 rounded-lg text-slate-200 file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-cyan-500/20 file:text-cyan-300 hover:file:bg-cyan-500/30 cursor-pointer focus:outline-none focus:border-cyan-400 transition-all"
+              />
+            </div>
+
+            {selectedFile && (() => {
+              const isAudio = selectedFile.type.startsWith("audio/") || /\.(mp3|wav|m4a|aac|ogg|flac|opus|wma)$/i.test(selectedFile.name);
+              return (
+                <div className={`p-3 rounded-lg border text-xs space-y-1.5 ${
+                  isAudio 
+                    ? "bg-amber-950/40 border-amber-500/50 text-amber-200"
+                    : "bg-cyan-950/40 border-cyan-500/40 text-cyan-200"
+                }`}>
+                  <div className="flex items-center gap-2 font-bold">
+                    {isAudio ? (
+                      <>
+                        <Mic className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                        <span>Wykryto plik audio (podcast / wywiad radiowy)</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                        <span>Wykryto plik wideo (analiza multimodalna)</span>
+                      </>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    {isAudio
+                      ? "Silnik skupi się w 100% na akustyce głosu, prozodii, intonacji, drżeniu głosu oraz treści merytorycznej (bez wymyślania mimiki twarzy)."
+                      : "Silnik dokona pełnej analizy mimiki twarzy FACS, kontaktu wzrokowego, mowy ciała oraz ścieżki dźwiękowej."}
+                  </p>
+                </div>
+              );
+            })()}
           </div>
         )}
 
