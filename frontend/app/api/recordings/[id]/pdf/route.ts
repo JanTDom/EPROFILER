@@ -16,6 +16,9 @@ export async function GET(
       return NextResponse.json({ error: "Brak identyfikatora nagrania." }, { status: 400 });
     }
 
+    const url = new URL(request.url);
+    const relationParam = url.searchParams.get("relation") as "sojusznik" | "przeciwnik" | null;
+
     // Pobranie danych nagrania wraz z profilem psychometrycznym
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/recordings?id=eq.${id}&select=*,psychometric_profile:psychometric_profiles(*)`,
@@ -44,12 +47,14 @@ export async function GET(
     }
 
     const recording = rows[0];
-    const pdfBuffer = await generateRecordingPdf(recording);
+    const pdfBuffer = await generateRecordingPdf(recording, relationParam);
 
     const safeTarget = (recording.polityk_docelowy || "Raport")
       .replace(/[^a-zA-Z0-9_-]/g, "_")
       .slice(0, 30);
-    const filename = `E-PROFILER_${safeTarget}_${id.slice(0, 8)}.pdf`;
+    const isAdv = relationParam === "przeciwnik" || recording.relacja_polityka === "przeciwnik";
+    const relPrefix = isAdv ? "E-PROFILER_OPONENT" : "E-PROFILER_AUDYT";
+    const filename = `${relPrefix}_${safeTarget}_${id.slice(0, 8)}.pdf`;
 
     return new Response(new Uint8Array(pdfBuffer), {
       status: 200,

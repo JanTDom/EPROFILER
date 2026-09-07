@@ -261,7 +261,7 @@ export default function RecordingDetailPage() {
 
           {/* Przycisk pobierania eleganckiego raportu PDF */}
           <a
-            href={getRecordingPdfUrl(recording.id)}
+            href={getRecordingPdfUrl(recording.id, activeRelation)}
             download
             className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all ${
               isAdversary

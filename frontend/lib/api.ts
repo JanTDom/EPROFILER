@@ -553,6 +553,9 @@ export function getVideoUrl(recordingId: string): string {
   return `${API_BASE}/api/media/${recordingId}/video`;
 }
 
-export function getRecordingPdfUrl(recordingId: string): string {
+export function getRecordingPdfUrl(recordingId: string, relation?: PoliticianRelation): string {
+  if (relation) {
+    return `/api/recordings/${recordingId}/pdf?relation=${relation}`;
+  }
   return `/api/recordings/${recordingId}/pdf`;
 }

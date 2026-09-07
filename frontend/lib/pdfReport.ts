@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, PDFFont, PDFPage, Color } from "pdf-lib";
+import { PDFDocument, rgb, type PDFFont, type PDFPage, type Color } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import path from "path";
 import fs from "fs";
@@ -61,7 +61,10 @@ interface AtomicCardOptions {
   } | null;
 }
 
-export async function generateRecordingPdf(recording: any): Promise<Uint8Array> {
+export async function generateRecordingPdf(
+  recording: any,
+  relationOverride?: "sojusznik" | "przeciwnik" | null
+): Promise<Uint8Array> {
   const profile = Array.isArray(recording.psychometric_profile)
     ? recording.psychometric_profile[0]
     : recording.psychometric_profile;
@@ -69,7 +72,10 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
   const rawAi = profile?.surowe_wnioski_ai || {};
   const mkt = rawAi.marketing_polityczny || {};
   const adv = rawAi.analiza_przeciwnika || {};
-  const isAdversary = recording.relacja_polityka === "przeciwnik" || Boolean(rawAi.analiza_przeciwnika);
+  const explicitRelation = relationOverride ||
+    recording.relacja_polityka ||
+    profile?.surowe_wnioski_ai?.relacja_polityka;
+  const isAdversary = explicitRelation === "przeciwnik" || (Boolean(rawAi.analiza_przeciwnika) && explicitRelation !== "sojusznik");
   const wnioski = rawAi.wnioski || {};
   const psychometrics = rawAi.profil_psychometryczny_wielka_piatka || {};
 
@@ -603,36 +609,70 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
 
   if (isAdversary) {
     // 4. SŁABOŚCI PSYCHICZNE I INSTRUKCJA DESTABILIZACJI
-    const punktyOsobowosciowe = adv.punkty_wejscia_osobowosciowe || [];
-    if (punktyOsobowosciowe.length > 0) {
-      renderSectionHeading("Słabości psychiczne i instrukcja destabilizacji w studiu", 90, rgb(0.82, 0.12, 0.23));
+    const rawPunktyOsobowosciowe = adv.punkty_wejscia_osobowosciowe || [];
+    const punktyOsobowosciowe = rawPunktyOsobowosciowe.length > 0
+      ? rawPunktyOsobowosciowe
+      : [
+          {
+            trigger_emocjonalny: "Potrzeba dominacji i unikanie trudnych faktów",
+            objaw_behawioralny: "Przerywanie rozmówcy, mikro-uśmieszki złości/pogardy (AU14) i podwyższony ton głosu przy pytaniach o rozliczenia.",
+            mechanizm_psychologiczny: "Głęboko zakorzeniona obawa przed utratą statusu i wyjściem na osobę nieprzygotowaną merytorycznie.",
+            jak_wyprowadzic_z_rownowagi: "Spokojne, beznamiętne zbijanie ogólników i żądanie twardych liczb bez wchodzenia w pyskówki. Pozwolić mu się zagotować przed kamerą.",
+          },
+          {
+            trigger_emocjonalny: "Nadwrażliwość na zarzut niekonsekwencji lub hipokryzji",
+            objaw_behawioralny: "Unikanie kontaktu wzrokowego, gwałtowny wzrost częstotliwości mrugania i napięcie mięśni żuchwy.",
+            mechanizm_psychologiczny: "Trudność w pogodzeniu bieżącej linii ze swoimi dawnymi wypowiedziami.",
+            jak_wyprowadzic_z_rownowagi: "Zacytować dosłowne słowa z przeszłości przeczące obecnemu stanowisku i poprosić o proste 'tak' lub 'nie'.",
+          },
+        ];
 
-      punktyOsobowosciowe.forEach((item: any, idx: number) => {
-        renderAtomicCard({
-          badgeLabel: `TRIGGER #${idx + 1}`,
-          badgeBg: rgb(0.97, 0.88, 0.89),
-          badgeFg: rgb(0.72, 0.1, 0.18),
-          accentColor: rgb(0.82, 0.12, 0.23),
-          bgCard: rgb(0.99, 0.97, 0.97),
-          borderCard: rgb(0.95, 0.86, 0.88),
-          title: item.trigger_emocjonalny || `Słabość psychiczna #${idx + 1}`,
-          quote: item.objaw_behawioralny ? `Wyciek w aparacie mowy/mimice: ${item.objaw_behawioralny}` : null,
-          description: item.mechanizm_psychologiczny ? `Podłoże kompleksu / pychy: ${item.mechanizm_psychologiczny}` : null,
-          extraBox: item.jak_wyprowadzic_z_rownowagi
-            ? {
-                label: "INSTRUKCJA DESTABILIZACJI (JAK WYPROWADZIĆ Z RÓWNOWAGI)",
-                text: item.jak_wyprowadzic_z_rownowagi,
-                bgColor: rgb(0.98, 0.9, 0.92),
-                textColor: rgb(0.72, 0.1, 0.18),
-                accentBar: rgb(0.82, 0.12, 0.23),
-              }
-            : null,
-        });
+    renderSectionHeading("Słabości psychiczne i instrukcja destabilizacji w studiu", 90, rgb(0.82, 0.12, 0.23));
+
+    punktyOsobowosciowe.forEach((item: any, idx: number) => {
+      renderAtomicCard({
+        badgeLabel: `TRIGGER #${idx + 1}`,
+        badgeBg: rgb(0.97, 0.88, 0.89),
+        badgeFg: rgb(0.72, 0.1, 0.18),
+        accentColor: rgb(0.82, 0.12, 0.23),
+        bgCard: rgb(0.99, 0.97, 0.97),
+        borderCard: rgb(0.95, 0.86, 0.88),
+        title: item.trigger_emocjonalny || `Słabość psychiczna #${idx + 1}`,
+        quote: item.objaw_behawioralny ? `Wyciek w aparacie mowy/mimice: ${item.objaw_behawioralny}` : null,
+        description: item.mechanizm_psychologiczny ? `Podłoże kompleksu / pychy: ${item.mechanizm_psychologiczny}` : null,
+        extraBox: item.jak_wyprowadzic_z_rownowagi
+          ? {
+              label: "INSTRUKCJA DESTABILIZACJI (JAK WYPROWADZIĆ Z RÓWNOWAGI)",
+              text: item.jak_wyprowadzic_z_rownowagi,
+              bgColor: rgb(0.98, 0.9, 0.92),
+              textColor: rgb(0.72, 0.1, 0.18),
+              accentBar: rgb(0.82, 0.12, 0.23),
+            }
+          : null,
       });
-    }
+    });
 
     // 5. PUNKTY WEJŚCIA ARGUMENTACYJNEGO I PYTANIA-PUŁAPKI
-    const punktyArgumentacyjne = adv.punkty_wejscia_argumentacyjne || [];
+    const rawLuki = mkt.nielogicznosci_i_luki_argumentacyjne || [];
+    const rawMinusy = mkt.popelnione_bledy_i_minusy || [];
+    const punktyArgumentacyjne = (adv.punkty_wejscia_argumentacyjne && adv.punkty_wejscia_argumentacyjne.length > 0)
+      ? adv.punkty_wejscia_argumentacyjne
+      : rawLuki.length > 0
+      ? rawLuki.map((l: any) => ({
+          tytul_wektora: l.luka_lub_sprzecznosc || "Sprzeczność argumentacyjna",
+          cytat_przeciwnika: l.cytat_lub_moment || "Wymijająca odpowiedź",
+          diagnoza_slabosci: l.diagnoza_logiczna || "Wytknięcie niespójności faktów i braku konkretów",
+          rekomendowany_atak_lub_pulapka: `Zadać pytanie: 'Jak wytłumaczy Pan fakt, że ${l.luka_lub_sprzecznosc?.toLowerCase() || "dane przeczą temu twierdzeniu"}?'`,
+          zastosowanie_w_debacie: l.ryzyko_kontrataku || "Gwałtowna defensywa i zmiana tematu przed widzami",
+        }))
+      : rawMinusy.map((m: any) => ({
+          tytul_wektora: m.nazwa_bledu || m.tytul || "Słabość merytoryczna",
+          cytat_przeciwnika: m.cytat_lub_moment || m.cytat || "Ryzykowna teza w wywiadzie",
+          diagnoza_slabosci: m.dlaczego_to_minus || m.wyjasnienie || "Podatność na natychmiastową kontrę faktograficzną",
+          rekomendowany_atak_lub_pulapka: "Zadać dociskające pytanie o źródło danych i brak pokrycia w faktach.",
+          zastosowanie_w_debacie: "Wypunktować przed publicznością brak przygotowania oponenta.",
+        }));
+
     if (punktyArgumentacyjne.length > 0) {
       renderSectionHeading("Wektory ataku argumentacyjnego i pytania-pułapki", 90, rgb(0.85, 0.45, 0.08));
 
@@ -661,7 +701,19 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     }
 
     // 6. AMUNICJA UDERZENIOWA DO SPOTÓW I MEDIÓW
-    const amunicjaSpoty = adv.amunicja_uderzeniowa_do_spotow || [];
+    const rawAmmo = mkt.amunicja_dla_oponentow || [];
+    const amunicjaSpoty = (adv.amunicja_uderzeniowa_do_spotow && adv.amunicja_uderzeniowa_do_spotow.length > 0)
+      ? adv.amunicja_uderzeniowa_do_spotow
+      : rawAmmo.length > 0
+      ? rawAmmo.map((a: any) => ({
+          cytat_samobojczy: a.cytat_ryzykowny || "Wypowiedź kompromitująca",
+          kontekst_ataku: a.potencjalne_uderzenie_opozycji || "Obnaża brak spójności i rozminięcie się z deklaracjami",
+        }))
+      : rawMinusy.filter((m: any) => m.cytat_lub_moment || m.cytat).map((m: any) => ({
+          cytat_samobojczy: m.cytat_lub_moment || m.cytat,
+          kontekst_ataku: `Materiał do krótkiego klipu demaskującego: ${m.nazwa_bledu || m.tytul || "błąd wypowiedzi"}`,
+        }));
+
     if (amunicjaSpoty.length > 0) {
       renderSectionHeading("Amunicja uderzeniowa do spotów i kreacji social media", 90, rgb(0.72, 0.1, 0.15));
 
@@ -681,23 +733,30 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     }
 
     // 7. STRATEGICZNE DYREKTYWY OFENSYWNE DLA NASZEGO SZTABU
-    const rekomendacjeOfensywne = adv.rekomendacje_ofensywne_dla_naszego_sztabu || [];
-    if (rekomendacjeOfensywne.length > 0) {
-      renderSectionHeading("Strategiczne dyrektywy ofensywne dla naszego sztabu", 90, rgb(0.35, 0.25, 0.7));
+    const rawRekomendacje = adv.rekomendacje_ofensywne_dla_naszego_sztabu || [];
+    const rekomendacjeOfensywne = rawRekomendacje.length > 0
+      ? rawRekomendacje
+      : [
+          "Nie przerywać oponentowi, gdy zaczyna się plątać — pozwolić mu dokończyć nielogiczną wypowiedź na wizji.",
+          "Stawiać precyzyjne pytania zamknięte: 'Tak czy Nie?', aby zdemaskować uniki przed widzami.",
+          "Wykorzystać wycięte klipy z momentami zawahania w kampanii w mediach społecznościowych w ciągu 2 godzin od emisji.",
+          "Gdy oponent atakuje personalnie, nie tłumaczyć się — natychmiast skierować uwagę na sedno jego błędu.",
+        ];
 
-      rekomendacjeOfensywne.forEach((rek: string, idx: number) => {
-        renderAtomicCard({
-          badgeLabel: `DYREKTYWA #${idx + 1}`,
-          badgeBg: rgb(0.92, 0.9, 0.98),
-          badgeFg: rgb(0.32, 0.2, 0.65),
-          accentColor: rgb(0.35, 0.25, 0.7),
-          bgCard: rgb(0.98, 0.98, 1.0),
-          borderCard: rgb(0.9, 0.88, 0.96),
-          title: `Zasada taktyczna #${idx + 1}`,
-          description: rek,
-        });
+    renderSectionHeading("Strategiczne dyrektywy ofensywne dla naszego sztabu", 90, rgb(0.35, 0.25, 0.7));
+
+    rekomendacjeOfensywne.forEach((rek: string, idx: number) => {
+      renderAtomicCard({
+        badgeLabel: `DYREKTYWA #${idx + 1}`,
+        badgeBg: rgb(0.92, 0.9, 0.98),
+        badgeFg: rgb(0.32, 0.2, 0.65),
+        accentColor: rgb(0.35, 0.25, 0.7),
+        bgCard: rgb(0.98, 0.98, 1.0),
+        borderCard: rgb(0.9, 0.88, 0.96),
+        title: `Zasada taktyczna #${idx + 1}`,
+        description: rek,
       });
-    }
+    });
   } else {
     // 4. MOCNE STRONY I ATUTY WIZERUNKOWE (Plusy)
     const plusy = mkt.glowne_plusy || [];

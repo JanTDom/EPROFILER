@@ -21,7 +21,9 @@ import {
   ChevronRight,
   ChevronDown,
   ArrowRight,
-  BookOpen
+  BookOpen,
+  Target,
+  Flame
 } from "lucide-react";
 
 export default function HelpPage() {
@@ -91,17 +93,24 @@ export default function HelpPage() {
           </button>
           <button
             type="button"
+            onClick={() => toggleSection("sojusznik-vs-przeciwnik")}
+            className="px-3 py-1.5 rounded-lg bg-rose-950/60 border border-rose-500/50 hover:border-rose-400 text-rose-300 hover:text-white transition-all cursor-pointer font-bold"
+          >
+            6. Sojusznik vs Przeciwnik (Wektory ataku)
+          </button>
+          <button
+            type="button"
             onClick={() => toggleSection("czat-ze-znacznikami")}
             className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700/70 hover:border-cyan-400 text-slate-300 hover:text-white transition-all cursor-pointer"
           >
-            6. Czat AI i znaczniki czasu
+            7. Czat AI i znaczniki czasu
           </button>
           <button
             type="button"
             onClick={() => toggleSection("pojedynek-1na1")}
             className="px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700/70 hover:border-cyan-400 text-slate-300 hover:text-white transition-all cursor-pointer"
           >
-            7. Pojedynki 1-na-1
+            8. Pojedynki 1-na-1
           </button>
         </div>
       </div>
@@ -478,7 +487,122 @@ export default function HelpPage() {
         )}
       </div>
 
-      {/* MODUŁ 6: Sztabowy czat ze znacznikami czasu */}
+      {/* MODUŁ 6: Tryb Sojusznik vs Przeciwnik */}
+      <div className="bg-studio-card/75 border border-rose-500/40 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xl relative overflow-hidden before:absolute before:top-0 before:left-0 before:w-full before:h-1 before:bg-gradient-to-r before:from-rose-600 before:via-red-500 before:to-amber-500">
+        <div 
+          onClick={() => toggleSection("sojusznik-vs-przeciwnik")}
+          className="flex items-center justify-between cursor-pointer group"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-rose-950/80 border border-rose-500/50 flex items-center justify-center text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.3)]">
+              <Target className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-mono font-bold text-rose-400 uppercase tracking-wider bg-rose-950/90 px-2 py-0.5 rounded border border-rose-500/40">Nowość</span>
+                <h2 className="text-lg sm:text-xl font-bold text-white group-hover:text-rose-300 transition-colors">
+                  6. Tryb Sojusznik vs Przeciwnik (Wywiad ofensywny i wektory ataku)
+                </h2>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Jak badać rywali, dziennikarzy i aktywistów: słabości psychiczne, instrukcja destabilizacji oraz eksport do PDF
+              </p>
+            </div>
+          </div>
+          <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${openSection === "sojusznik-vs-przeciwnik" ? "rotate-180 text-rose-400" : ""}`} />
+        </div>
+
+        {openSection === "sojusznik-vs-przeciwnik" && (
+          <div className="pt-4 border-t border-slate-800/80 space-y-5 text-xs sm:text-sm text-slate-300 leading-relaxed">
+            <p>
+              W polityce i mediach analiza nie służy wyłącznie audytowi własnego kandydata. W walce wyborczej i debacie publicznej równie kluczowa jest wiedza o oponencie: <strong>jakie są jego emocje, lęki, kompleksy oraz jak można go skutecznie wyprowadzić z równowagi przed kamerami</strong>.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-900/90 border border-emerald-500/40 rounded-xl space-y-2">
+                <div className="flex items-center gap-2 text-emerald-300 font-bold">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>Tryb 🛡️ Sojusznik (Audyt sztabowy)</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Dla naszych kandydatów i współpracowników. Skupia się na obronie: wygaszaniu wpadek, wzmacnianiu naturalnych atutów, likwidacji niepożądanych nawyków mowy ciała oraz skryptach gotowych ripost przed trudnymi wywiadami.
+                </p>
+              </div>
+
+              <div className="p-4 bg-slate-900/90 border border-rose-500/50 rounded-xl space-y-2 shadow-[0_0_15px_rgba(244,63,94,0.15)]">
+                <div className="flex items-center gap-2 text-rose-300 font-bold">
+                  <Target className="w-4 h-4 text-rose-400" />
+                  <span>Tryb 🎯 Przeciwnik (Wywiad ofensywny & Wektory ataku)</span>
+                </div>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Dla każdego oponenta: polityka rywalizującej formacji, ale również stronniczego dziennikarza czy agresywnego działacza społecznego. Skupia się na ataku: obnażaniu pychy, wywoływaniu złości i przygotowywaniu amunicji do spotów.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <h3 className="text-xs font-bold font-mono text-white uppercase tracking-wider flex items-center gap-2">
+                <Flame className="w-4 h-4 text-amber-400" />
+                Kluczowe elementy Dossier Ataku na Przeciwnika:
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3.5 bg-rose-950/30 border border-rose-500/30 rounded-xl space-y-1.5">
+                  <span className="font-bold text-rose-300 flex items-center gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                    1. Słabości psychiczne i instrukcja destabilizacji
+                  </span>
+                  <p className="text-slate-400 leading-relaxed text-[11px]">
+                    Diagnoza kompleksów i wycieków behawioralnych (np. grymasy pogardy AU14, przyspieszony oddech, drżenie krtani). Każdy punkt zawiera czerwoną ramkę <strong>„Jak wyprowadzić z równowagi”</strong> — konkretną strategię, jak sprawić, by oponent stracił panowanie nad sobą na wizji.
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-amber-950/30 border border-amber-500/30 rounded-xl space-y-1.5">
+                  <span className="font-bold text-amber-300 flex items-center gap-1.5">
+                    <Swords className="w-3.5 h-3.5 text-amber-400" />
+                    2. Wektory argumentacyjne i pytania-pułapki
+                  </span>
+                  <p className="text-slate-400 leading-relaxed text-[11px]">
+                    Wypunktowanie sprzeczności i luk logicznych z dosłownymi cytatami. System generuje <strong>gotowe pytania-pułapki</strong> (np. pytania zamknięte typu „Tak czy Nie?”), uniemożliwiające wymijającą odpowiedź przed widzami.
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-red-950/30 border border-red-500/30 rounded-xl space-y-1.5">
+                  <span className="font-bold text-red-300 flex items-center gap-1.5">
+                    <Film className="w-3.5 h-3.5 text-red-400" />
+                    3. Amunicja uderzeniowa do spotów (tzw. samobóje)
+                  </span>
+                  <p className="text-slate-400 leading-relaxed text-[11px]">
+                    Wychwytuje najbardziej kompromitujące wypowiedzi oponenta wraz z rekomendacją montażu — gotowe fragmenty do wycięcia na rolki w social media (TikTok/X/Facebook) w ciągu 2 godzin od nagrania.
+                  </p>
+                </div>
+
+                <div className="p-3.5 bg-purple-950/30 border border-purple-500/30 rounded-xl space-y-1.5">
+                  <span className="font-bold text-purple-300 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                    4. Strategiczne dyrektywy ofensywne
+                  </span>
+                  <p className="text-slate-400 leading-relaxed text-[11px]">
+                    Praktyczne wytyczne dla naszego reprezentanta idącego na starcie z danym oponentem: na co uważać, jakich tematów nie dotykać, a w jakie punkty uderzać bezlitośnie.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-slate-900/80 border border-slate-700/80 rounded-xl space-y-2">
+              <strong className="text-white block text-xs">Gdzie możesz włączać i przełączać tryb Przeciwnika?</strong>
+              <ul className="space-y-1.5 text-xs text-slate-300 list-disc list-inside">
+                <li><strong>Na stronie głównej (pasek szybkiego startu):</strong> Przed wklejeniem linku możesz kliknąć przełącznik <code>[ Przeciwnik ]</code>.</li>
+                <li><strong>W nagłówku nagrania (HUD):</strong> Przycisk <code>[ 🎯 Przeciwnik (Wektory ataku) ]</code> przełącza widok i dane w ułamku sekundy (0 ms).</li>
+                <li><strong>W oknie wyboru mówcy:</strong> Klikając „Wskaż innego mówcę”, możesz przypisać relację „Przeciwnik” do konkretnej wykrytej osoby (np. SPEAKER_00 lub SPEAKER_01).</li>
+                <li><strong>Eksport do PDF:</strong> Po wybraniu trybu Przeciwnik, górny przycisk pobierania zmienia się w <code>Raport oponenta PDF (Wektory ataku)</code> i generuje dokument z pełnym dossier wywiadu ofensywnego.</li>
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* MODUŁ 7: Sztabowy czat ze znacznikami czasu */}
       <div className="bg-studio-card/75 border border-studio-border/80 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xl">
         <div 
           onClick={() => toggleSection("czat-ze-znacznikami")}
@@ -490,7 +614,7 @@ export default function HelpPage() {
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-white group-hover:text-cyan-300 transition-colors">
-                6. Interaktywny czat AI z nagraniem i klikalne znaczniki czasu
+                7. Interaktywny czat AI z nagraniem i klikalne znaczniki czasu
               </h2>
               <p className="text-xs text-slate-400">
                 Rozmowa z asystentem sztabowym i automatyczne przewijanie odtwarzacza
@@ -529,7 +653,7 @@ export default function HelpPage() {
         )}
       </div>
 
-      {/* MODUŁ 7: Pojedynki 1-na-1 */}
+      {/* MODUŁ 8: Pojedynki 1-na-1 */}
       <div className="bg-studio-card/75 border border-studio-border/80 rounded-2xl p-6 sm:p-8 space-y-4 shadow-xl">
         <div 
           onClick={() => toggleSection("pojedynek-1na1")}
@@ -541,7 +665,7 @@ export default function HelpPage() {
             </div>
             <div>
               <h2 className="text-lg sm:text-xl font-bold text-white group-hover:text-amber-300 transition-colors">
-                7. Pojedynek 1-na-1 (starcie kandydatów)
+                8. Pojedynek 1-na-1 (starcie kandydatów)
               </h2>
               <p className="text-xs text-slate-400">
                 Porównanie dwóch wystąpień, wskaźnik dominacji i przeciąganie liny
