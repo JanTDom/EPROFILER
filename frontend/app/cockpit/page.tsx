@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { fetchRecordings } from "@/lib/api";
 import { 
   Radio, 
   Mic, 
@@ -28,7 +29,10 @@ import {
   Swords, 
   ArrowLeft,
   ChevronRight,
-  HelpCircle
+  HelpCircle,
+  AlertCircle,
+  Play,
+  RotateCcw
 } from "lucide-react";
 
 interface StudioGuest {
@@ -80,12 +84,13 @@ function StudioCockpitContent() {
 
   // Lista gości w studiu i aktywny oponent
   const [guests, setGuests] = useState<StudioGuest[]>([
-    { name: "Sławomir Mentzen", party: "Konfederacja", role: "Poseł" },
-    { name: "Tobiasz Bocheński", party: "PiS", role: "Europoseł" },
-    { name: "Krzysztof Śmiszek", party: "Lewica", role: "Europoseł" },
-    { name: "Bogdan Rymanowski", party: "Studio", role: "Prowadzący" },
+    { name: "Główny oponent", party: "Opozycja", role: "Debatant" },
+    { name: "Prowadzący debatę", party: "Studio", role: "Dziennikarz" },
   ]);
-  const [activeSpeaker, setActiveSpeaker] = useState<string>("Sławomir Mentzen");
+  const [activeSpeaker, setActiveSpeaker] = useState<string>("Główny oponent");
+  const activeSpeakerRef = useRef<string>("Główny oponent");
+  activeSpeakerRef.current = activeSpeaker;
+
   const [newGuestName, setNewGuestName] = useState("");
   const [newGuestParty, setNewGuestParty] = useState("");
 
@@ -96,35 +101,25 @@ function StudioCockpitContent() {
   const [warroomMessages, setWarroomMessages] = useState<WarroomMessage[]>([]);
   const [outgoingNote, setOutgoingNote] = useState("");
 
-  // Rozpoznawanie mowy na żywo (Web Speech API)
+  // Rozpoznawanie mowy na żywo i status mikrofonu
   const [isListening, setIsListening] = useState(false);
+  const [micStatus, setMicStatus] = useState<"idle" | "requesting" | "listening" | "error">("idle");
+  const [micErrorMessage, setMicErrorMessage] = useState<string | null>(null);
+  const [audioLevel, setAudioLevel] = useState<number>(0);
   const [interimTranscript, setInterimTranscript] = useState("");
   const [recentSpeechHistory, setRecentSpeechHistory] = useState<string[]>([]);
+  const [manualInput, setManualInput] = useState("");
+
+  const isListeningRef = useRef<boolean>(false);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const recognitionRef = useRef<any>(null);
   const speechBufferRef = useRef<string>("");
   const analyzeDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Karty taktyczne (Heads-Up Display)
-  const [alerts, setAlerts] = useState<TacticalAlert[]>([
-    {
-      id: "demo-1",
-      typ: "wtopa",
-      tytul: "SPRZECZNOŚĆ W GŁOSOWANIACH",
-      cytat_oponenta: "Nigdy nie popieraliśmy podwyższania obciążeń dla małych firm...",
-      amunicja: "Złap go: „A w marcu 2023 osobiście głosował Pan ZA tą ustawą!”",
-      timestamp: "14:12",
-      speaker: "Sławomir Mentzen",
-    },
-    {
-      id: "demo-2",
-      typ: "emocje",
-      tytul: "TRAFIONY W CZUŁY PUNKT (NERWY)",
-      cytat_oponenta: "To są insynuacje mediów, ja nie zamierzam się z tego tłumaczyć...",
-      amunicja: "Dociśnij go: „Dlaczego unika Pan odpowiedzi o konkretną kwotę dotacji?”",
-      timestamp: "14:13",
-      speaker: "Tobiasz Bocheński",
-    },
-  ]);
+  // Karty taktyczne (Heads-Up Display) — CZYSTY STAN POCZĄTKOWY
+  const [alerts, setAlerts] = useState<TacticalAlert[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // 1. Inicjalizacja Screen Wake Lock (ochrona przed wygaszeniem)
@@ -249,25 +244,116 @@ function StudioCockpitContent() {
     }
   };
 
-  // 5. Obsługa Web Speech API w przeglądarce (Safari / Chrome na iPadzie)
-  const startListening = () => {
-    const SpeechRecognition =
+  // 1b. Pobranie prawdziwych nagrań i oponentów z bazy danych
+  useEffect(() => {
+    async function loadStudioData() {
+      try {
+        const recs = await fetchRecordings();
+        if (recs && recs.length > 0) {
+          const loadedGuests: StudioGuest[] = [];
+          for (const r of recs) {
+            const targetSpeaker = r.rozpoznani_mowcy?.find((s) => s.jest_celem || s.speaker_tag === r.speaker_docelowy_tag);
+            const name = r.polityk_docelowy || targetSpeaker?.imie_nazwisko || r.tytul.split(/[-–|]/)[0].trim();
+            if (name && !loadedGuests.some((g) => g.name.toLowerCase() === name.toLowerCase())) {
+              loadedGuests.push({
+                name,
+                party: r.relacja_polityka === "przeciwnik" ? "Oponent" : "Gość",
+                role: r.typ_nagrania || "Debata",
+              });
+            }
+          }
+          if (loadedGuests.length > 0) {
+            loadedGuests.push({ name: "Prowadzący debatę", party: "Studio", role: "Dziennikarz" });
+            setGuests(loadedGuests);
+
+            if (recordingId) {
+              const targetRec = recs.find((r) => r.id === recordingId);
+              if (targetRec) {
+                const targetName =
+                  targetRec.polityk_docelowy ||
+                  targetRec.rozpoznani_mowcy?.find((s) => s.jest_celem)?.imie_nazwisko ||
+                  targetRec.tytul;
+                if (targetName) {
+                  setActiveSpeaker(targetName);
+                }
+              }
+            } else {
+              setActiveSpeaker(loadedGuests[0].name);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Could not load recordings for cockpit:", e);
+      }
+    }
+    loadStudioData();
+  }, [recordingId]);
+
+  // 5. Obsługa mikrofonu i Web Speech API z miernikiem poziomu dźwięku (VU Meter)
+  const startListening = async () => {
+    setMicErrorMessage(null);
+    setMicStatus("requesting");
+
+    const SpeechRecognitionClass =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-    if (!SpeechRecognition) {
-      alert("Twoja przeglądarka nie obsługuje SpeechRecognition. Użyj Safari lub Chrome na iPadzie.");
+    if (!SpeechRecognitionClass) {
+      setMicStatus("error");
+      setMicErrorMessage(
+        "Twoja przeglądarka nie obsługuje wbudowanego rozpoznawania mowy (Web Speech API). Aby użyć mikrofonu na żywo, otwórz stronę w Safari (na iPadzie/Macu) lub Google Chrome, albo skorzystaj z symulatora wpisywania wypowiedzi poniżej."
+      );
       return;
     }
 
     try {
-      const recognition = new SpeechRecognition();
+      // 1. Jawna prośba o mikrofon przez getUserMedia
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaStreamRef.current = stream;
+
+        // 2. Miernik audio (VU meter dla pewności, że mikrofon słyszy)
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            const audioCtx = new AudioContextClass();
+            audioContextRef.current = audioCtx;
+            const source = audioCtx.createMediaStreamSource(stream);
+            const analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 128;
+            source.connect(analyser);
+
+            const dataArray = new Uint8Array(analyser.frequencyBinCount);
+            const checkVolume = () => {
+              if (!isListeningRef.current) return;
+              analyser.getByteFrequencyData(dataArray);
+              let sum = 0;
+              for (let i = 0; i < dataArray.length; i++) {
+                sum += dataArray[i];
+              }
+              const avg = sum / dataArray.length;
+              setAudioLevel(Math.min(100, Math.round(avg * 2.2)));
+              animationFrameRef.current = requestAnimationFrame(checkVolume);
+            };
+            checkVolume();
+          }
+        } catch (e) {
+          console.warn("Audio visualizer init error:", e);
+        }
+      }
+
+      // 3. Konfiguracja SpeechRecognition
+      const recognition = new SpeechRecognitionClass();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = "pl-PL";
+      recognition.maxAlternatives = 1;
 
       recognition.onstart = () => {
+        isListeningRef.current = true;
         setIsListening(true);
+        setMicStatus("listening");
         setIsTimerRunning(true);
+        setMicErrorMessage(null);
       };
 
       recognition.onresult = (event: any) => {
@@ -289,45 +375,93 @@ function StudioCockpitContent() {
           speechBufferRef.current += " " + finalChunk.trim();
           setRecentSpeechHistory((prev) => [finalChunk.trim(), ...prev.slice(0, 5)]);
 
-          // Zbieramy wypowiedź i po krótkiej pauzie (2.2 sekundy) wysyłamy do analizy AI
           if (analyzeDebounceTimer.current) clearTimeout(analyzeDebounceTimer.current);
           analyzeDebounceTimer.current = setTimeout(() => {
             const fullChunk = speechBufferRef.current.trim();
-            if (fullChunk.length >= 12) {
-              triggerAiAnalysis(fullChunk, activeSpeaker);
+            if (fullChunk.length >= 8) {
+              triggerAiAnalysis(fullChunk, activeSpeakerRef.current);
               speechBufferRef.current = "";
             }
-          }, 2200);
+          }, 1800);
         }
       };
 
       recognition.onerror = (event: any) => {
         console.warn("Speech recognition error:", event.error);
-        if (event.error === "not-allowed") {
-          setIsListening(false);
+        if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+          setMicStatus("error");
+          setMicErrorMessage("Brak uprawnień do mikrofonu w przeglądarce. Zezwól na dostęp klikając ikonę kłódki lub kamery w pasku adresu.");
+          stopListening();
+        } else if (event.error === "audio-capture") {
+          setMicStatus("error");
+          setMicErrorMessage("Brak wykrytego mikrofonu lub mikrofon jest zajęty przez inną aplikację.");
+          stopListening();
+        } else if (event.error === "network") {
+          setMicStatus("error");
+          setMicErrorMessage("Błąd sieci w usłudze rozpoznawania mowy przeglądarki.");
         }
       };
 
       recognition.onend = () => {
-        // Auto-restart jeśli użytkownik nie wyłączył ręcznie
-        if (isListening) {
-          try {
-            recognition.start();
-          } catch (e) {}
+        if (isListeningRef.current) {
+          // Restart po wyciszeniu (wymagane w Safari/Chrome)
+          setTimeout(() => {
+            if (isListeningRef.current && recognitionRef.current) {
+              try {
+                recognition.start();
+              } catch (e) {
+                console.warn("Restart recognition exception:", e);
+              }
+            }
+          }, 200);
         } else {
           setIsListening(false);
+          setMicStatus("idle");
         }
       };
 
       recognition.start();
       recognitionRef.current = recognition;
-    } catch (err) {
-      console.error("Nie udało się zainicjować rozpoznawania mowy:", err);
+      isListeningRef.current = true;
+      setIsListening(true);
+      setMicStatus("listening");
+    } catch (err: any) {
+      console.error("Błąd uruchamiania mikrofonu:", err);
+      setMicStatus("error");
+      if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
+        setMicErrorMessage("Odmówiono dostępu do mikrofonu. Kliknij ikonę kłódki/ustawień strony obok adresu 'eprofiler.pl' w przeglądarce i zezwól na mikrofon.");
+      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+        setMicErrorMessage("Nie wykryto żadnego mikrofonu w Twoim urządzeniu.");
+      } else {
+        setMicErrorMessage(`Błąd mikrofonu: ${err.message || "Nie udało się aktywować nasłuchu."}`);
+      }
+      setIsListening(false);
+      isListeningRef.current = false;
     }
   };
 
   const stopListening = () => {
+    isListeningRef.current = false;
     setIsListening(false);
+    setMicStatus("idle");
+    setAudioLevel(0);
+    setInterimTranscript("");
+
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
@@ -490,27 +624,54 @@ function StudioCockpitContent() {
         <div className="flex items-center gap-2">
           {/* Przycisk nasłuchu audio */}
           {activeRole === "studio" && (
-            <button
-              type="button"
-              onClick={isListening ? stopListening : startListening}
-              className={`px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
-                isListening
-                  ? "bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_20px_rgba(225,29,72,0.6)] animate-pulse"
-                  : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
-              }`}
-            >
-              {isListening ? (
-                <>
-                  <Mic className="w-3.5 h-3.5 animate-bounce" />
-                  <span>NASŁUCH AKTYWNY</span>
-                </>
-              ) : (
-                <>
-                  <MicOff className="w-3.5 h-3.5 text-slate-400" />
-                  <span>WŁĄCZ MIKROFON</span>
-                </>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={isListening ? stopListening : startListening}
+                disabled={micStatus === "requesting"}
+                className={`px-3.5 py-1.5 rounded-xl font-mono text-xs font-bold flex items-center gap-2 transition-all cursor-pointer ${
+                  isListening
+                    ? "bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_20px_rgba(225,29,72,0.6)] animate-pulse"
+                    : micStatus === "requesting"
+                    ? "bg-amber-600 text-white animate-pulse"
+                    : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-500"
+                }`}
+              >
+                {micStatus === "requesting" ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>PROSZĘ ZEZWOLIĆ...</span>
+                  </>
+                ) : isListening ? (
+                  <>
+                    <Mic className="w-3.5 h-3.5 animate-bounce text-white" />
+                    <span>NASŁUCH AKTYWNY</span>
+                  </>
+                ) : (
+                  <>
+                    <MicOff className="w-3.5 h-3.5 text-slate-400" />
+                    <span>WŁĄCZ MIKROFON</span>
+                  </>
+                )}
+              </button>
+
+              {/* Miernik poziomu audio (dowód rejestracji głosu) */}
+              {isListening && (
+                <div 
+                  className="flex items-end gap-1 h-5 px-2 py-1 bg-black/70 rounded-lg border border-emerald-500/50" 
+                  title={`Poziom głosu: ${audioLevel}%`}
+                >
+                  {[12, 25, 40, 60, 80].map((threshold, idx) => (
+                    <span
+                      key={idx}
+                      className={`w-1 rounded-sm transition-all duration-75 ${
+                        audioLevel >= threshold ? "bg-emerald-400 h-full shadow-[0_0_6px_rgba(52,211,153,0.8)]" : "bg-slate-700 h-1.5"
+                      }`}
+                    />
+                  ))}
+                </div>
               )}
-            </button>
+            </div>
           )}
 
           {/* WakeLock status */}
@@ -574,6 +735,34 @@ function StudioCockpitContent() {
           </button>
         </div>
       </header>
+
+      {/* OSTRZEŻENIE O BŁĘDZIE MIKROFONU */}
+      {micErrorMessage && (
+        <div className="bg-red-950/90 border-b border-red-500/80 px-4 py-3 animate-fade-in">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm text-red-200">
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+              <span>{micErrorMessage}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={startListening}
+                className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white font-mono font-bold text-xs rounded-lg transition-colors cursor-pointer"
+              >
+                Spróbuj ponownie
+              </button>
+              <button
+                type="button"
+                onClick={() => setMicErrorMessage(null)}
+                className="p-1 text-red-300 hover:text-white cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 2. GŁÓWNY PANEL WYBORU MÓWCY W STUDIU (PASEK RYWALI - 1 TAP SELECTION) */}
       <section className="px-4 py-3 bg-[#060b18] border-b border-slate-800/80">
@@ -687,17 +876,122 @@ function StudioCockpitContent() {
             </span>
           </div>
 
+          {/* KONSOLA SYMULACJI GŁOSU OPONENTA / SZYBKI TEST */}
+          <div className="p-3.5 sm:p-4 bg-[#080e1e] border border-slate-800/90 rounded-2xl space-y-2.5 shadow-lg">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-mono font-bold text-slate-300 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                Symulator wypowiedzi w studiu (szybki test generowania ripost)
+              </span>
+              <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+                Kliknij gotowy zwrot lub wpisz własne słowa oponenta
+              </span>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  triggerAiAnalysis(
+                    "Nigdy nie popieraliśmy podwyższania obciążeń fiskalnych dla przedsiębiorców, to wymysł rządu.",
+                    activeSpeaker
+                  )
+                }
+                disabled={isAnalyzing}
+                className="text-[11px] font-mono px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-700/70 hover:border-slate-500 transition-colors text-left cursor-pointer"
+              >
+                💬 „Nigdy nie popieraliśmy podwyżek podatków...”
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  triggerAiAnalysis(
+                    "To są manipulacje i insynuacje mediów, ja nie zamierzam się z tego publicznie tłumaczyć!",
+                    activeSpeaker
+                  )
+                }
+                disabled={isAnalyzing}
+                className="text-[11px] font-mono px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-700/70 hover:border-slate-500 transition-colors text-left cursor-pointer"
+              >
+                💬 „To insynuacje mediów, nie będę się tłumaczyć!”
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  triggerAiAnalysis(
+                    "Panie pośle, dlaczego unika pan odpowiedzi na pytanie o 40 miliardów deficytu?",
+                    "Prowadzący debatę"
+                  )
+                }
+                disabled={isAnalyzing}
+                className="text-[11px] font-mono px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-700/70 hover:border-slate-500 transition-colors text-left cursor-pointer"
+              >
+                💬 Prowadzący: „Dlaczego unika pan odpowiedzi o deficyt?”
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (manualInput.trim()) {
+                  triggerAiAnalysis(manualInput.trim(), activeSpeaker);
+                  setManualInput("");
+                }
+              }}
+              className="flex gap-2 pt-1"
+            >
+              <input
+                type="text"
+                value={manualInput}
+                onChange={(e) => setManualInput(e.target.value)}
+                placeholder={`Wpisz lub wklej dowolne słowa oponenta (${activeSpeaker})...`}
+                className="flex-1 bg-black/80 border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-rose-500 font-sans"
+              />
+              <button
+                type="submit"
+                disabled={!manualInput.trim() || isAnalyzing}
+                className="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-30 text-slate-950 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-sm"
+              >
+                <Send className="w-3.5 h-3.5" />
+                <span>Analizuj</span>
+              </button>
+            </form>
+          </div>
+
           {/* LISTA WIELKICH KART UDERZENIOWYCH DLA POLITYKA (CZYTELNE Z 60 CM KĄTEM OKA) */}
           <div className="space-y-4">
             {alerts.length === 0 ? (
-              <div className="p-12 text-center border border-dashed border-slate-800 rounded-2xl space-y-3">
-                <Radio className="w-8 h-8 text-slate-600 mx-auto animate-pulse" />
-                <h3 className="text-sm font-bold text-slate-300">
-                  Czekam na wypowiedź oponenta w studiu...
-                </h3>
-                <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                  Włącz mikrofon lub uruchom nasłuch studyjny. Gdy {activeSpeaker} zacznie mówić, system w 2 sekundy wygeneruje gotową ripostę, wtopę i pytanie zamykające w pułapce.
-                </p>
+              <div className="p-10 sm:p-14 text-center border-2 border-dashed border-slate-800/90 rounded-2xl bg-gradient-to-b from-slate-900/40 via-black/40 to-black/80 space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-700/80 flex items-center justify-center mx-auto shadow-inner">
+                  <Radio
+                    className={`w-7 h-7 ${
+                      isListening ? "text-emerald-400 animate-pulse" : "text-slate-500"
+                    }`}
+                  />
+                </div>
+                <div className="space-y-1.5 max-w-lg mx-auto">
+                  <h3 className="text-base sm:text-lg font-black text-white tracking-wide font-mono">
+                    {isListening
+                      ? "● NASŁUCH STUDYJNY AKTYWNY — REJESTRACJA GŁOSU"
+                      : "KOKPIT W STANIE CZUWANIA STUDYJNEGO"}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-400 leading-relaxed font-sans">
+                    {isListening
+                      ? `Mikrofon aktywnie rejestruje słowa oponenta (${activeSpeaker}). Gdy padnie kłamstwo, sprzeczność lub unik, w ciągu 2 sekund pojawi się karta gotowej riposty.`
+                      : "Ekran jest czysty i gotowy do debaty. Włącz mikrofon powyżej lub użyj szybkiego symulatora, aby przetestować reakcję AI."}
+                  </p>
+                </div>
+
+                {!isListening && (
+                  <button
+                    type="button"
+                    onClick={startListening}
+                    className="px-6 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-mono font-bold text-xs rounded-xl shadow-[0_0_25px_rgba(225,29,72,0.45)] transition-all inline-flex items-center gap-2 cursor-pointer scale-100 hover:scale-105"
+                  >
+                    <Mic className="w-4 h-4" />
+                    <span>WŁĄCZ MIKROFON I ROZPOCZNIJ NASŁUCH</span>
+                  </button>
+                )}
               </div>
             ) : (
               alerts.map((alert) => {
