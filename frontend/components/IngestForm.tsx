@@ -25,7 +25,10 @@ import {
   ChevronDown,
   ChevronUp,
   Mic,
-  Target
+  Target,
+  Volume2,
+  VolumeX,
+  AlertTriangle
 } from "lucide-react";
 import { createRecordingFromUrl, uploadRecordingFile, sanitizeVideoUrl } from "@/lib/api";
 import { RecordingType, PoliticianRelation } from "@/lib/types";
@@ -78,10 +81,31 @@ export const IngestForm: React.FC = () => {
   const [captureSeconds, setCaptureSeconds] = useState(0);
   const [capturedBlob, setCapturedBlob] = useState<Blob | null>(null);
   const [capturedUrl, setCapturedUrl] = useState<string | null>(null);
+  const [audioSourceMode, setAudioSourceMode] = useState<"tab" | "mic" | "both">("tab");
+  const [hasAudioTrack, setHasAudioTrack] = useState<boolean | null>(null);
+  const [audioLevel, setAudioLevel] = useState<number>(0);
+  const [audioWarning, setAudioWarning] = useState<string | null>(null);
+  const [recordedHasAudio, setRecordedHasAudio] = useState<boolean | null>(null);
+  const [showDrmGuide, setShowDrmGuide] = useState(false);
+
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
   const timerRef = useRef<any>(null);
+
+  // Czyszczenie zasobów przy odmontowaniu komponentu
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (mediaStreamRef.current) mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      if (micStreamRef.current) micStreamRef.current.getTracks().forEach((t) => t.stop());
+      if (audioContextRef.current) audioContextRef.current.close().catch(() => {});
+    };
+  }, []);
 
   const formatTimer = (sec: number) => {
     const m = Math.floor(sec / 60);
@@ -89,24 +113,134 @@ export const IngestForm: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const startScreenCapture = async () => {
+  const startScreenCapture = async (sourceModeOverride?: "tab" | "mic" | "both") => {
     try {
       setError(null);
+      setAudioWarning(null);
+      setAudioLevel(0);
+      const chosenMode = sourceModeOverride || audioSourceMode;
+
       if (!navigator.mediaDevices?.getDisplayMedia) {
         throw new Error("Twoja przeglądarka nie obsługuje przechwytywania ekranu/karty.");
       }
 
-      const stream = await navigator.mediaDevices.getDisplayMedia({
+      // 1. Pobierz obraz (i opcjonalnie dźwięk z karty w oknie wyboru)
+      const displayStream = await navigator.mediaDevices.getDisplayMedia({
         video: { displaySurface: "browser" as any },
-        audio: true,
+        audio: chosenMode !== "mic",
       });
 
-      mediaStreamRef.current = stream;
+      mediaStreamRef.current = displayStream;
 
-      if (videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream;
+      const displayAudioTracks = displayStream.getAudioTracks();
+      let finalAudioTracks: MediaStreamTrack[] = [];
+      let trackForMeter: MediaStreamTrack | null = null;
+
+      // 2. Obsługa mikrofonu lub trybu łączonego (karta + mikrofon)
+      if (chosenMode === "mic" || chosenMode === "both") {
+        try {
+          const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStreamRef.current = micStream;
+          const micAudioTracks = micStream.getAudioTracks();
+
+          if (chosenMode === "both" && displayAudioTracks.length > 0) {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            const audioCtx = new AudioContextClass();
+            audioContextRef.current = audioCtx;
+            const dest = audioCtx.createMediaStreamDestination();
+
+            const tabSource = audioCtx.createMediaStreamSource(new MediaStream(displayAudioTracks));
+            const micSource = audioCtx.createMediaStreamSource(micStream);
+            tabSource.connect(dest);
+            micSource.connect(dest);
+
+            const mixedTrack = dest.stream.getAudioTracks()[0];
+            finalAudioTracks = [mixedTrack];
+            trackForMeter = mixedTrack;
+          } else {
+            finalAudioTracks = micAudioTracks;
+            trackForMeter = micAudioTracks[0] || null;
+          }
+        } catch (micErr: any) {
+          console.warn("Błąd mikrofonu:", micErr);
+          if (chosenMode === "mic") {
+            displayStream.getTracks().forEach((t) => t.stop());
+            throw new Error("Brak dostępu do mikrofonu: " + (micErr.message || "Udziel uprawnień w przeglądarce."));
+          }
+          finalAudioTracks = displayAudioTracks;
+          trackForMeter = displayAudioTracks[0] || null;
+        }
+      } else {
+        // Tylko karta
+        finalAudioTracks = displayAudioTracks;
+        trackForMeter = displayAudioTracks[0] || null;
       }
 
+      // Jeśli karta nie ma ścieżki audio, automatycznie ratujemy nagranie mikrofonem komputera!
+      if (finalAudioTracks.length === 0) {
+        try {
+          const micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStreamRef.current = micStream;
+          finalAudioTracks = micStream.getAudioTracks();
+          trackForMeter = finalAudioTracks[0] || null;
+          setAudioWarning(
+            "Nie zaznaczono dźwięku karty, więc system automatycznie włączył mikrofon (dźwięk nagrywa się z głośników komputera)!"
+          );
+        } catch {
+          setAudioWarning(
+            "Uwaga: Nagrywasz BEZ GŁOSU! W oknie wyboru karty nie zaznaczono opcji 'Udostępnij dźwięk z karty'."
+          );
+        }
+      }
+
+      const audioDetected = finalAudioTracks.length > 0;
+      setHasAudioTrack(audioDetected);
+
+      // 3. Połączony strumień rejestrowany
+      const combinedTracks = [
+        ...displayStream.getVideoTracks(),
+        ...finalAudioTracks,
+      ];
+      const combinedStream = new MediaStream(combinedTracks);
+
+      if (videoPreviewRef.current) {
+        videoPreviewRef.current.srcObject = combinedStream;
+      }
+
+      // 4. Miernik głośności VU w czasie rzeczywistym
+      if (trackForMeter) {
+        try {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+            audioContextRef.current = new AudioContextClass();
+          }
+          const audioCtx = audioContextRef.current;
+          if (audioCtx.state === "suspended") {
+            await audioCtx.resume();
+          }
+          const source = audioCtx.createMediaStreamSource(new MediaStream([trackForMeter]));
+          const analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 128;
+          source.connect(analyser);
+
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          const updateVolume = () => {
+            analyser.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+            const avg = sum / dataArray.length;
+            setAudioLevel(Math.min(100, Math.round(avg * 2.5)));
+            animationFrameRef.current = requestAnimationFrame(updateVolume);
+          };
+          updateVolume();
+        } catch (visErr) {
+          console.warn("Błąd inicjalizacji analizatora audio:", visErr);
+        }
+      } else {
+        setAudioLevel(0);
+      }
+
+      // 5. Recorder
       const chunks: BlobPart[] = [];
       const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
         ? "video/webm;codecs=vp9,opus"
@@ -114,7 +248,7 @@ export const IngestForm: React.FC = () => {
         ? "video/webm"
         : "video/mp4";
 
-      const recorder = new MediaRecorder(stream, { mimeType });
+      const recorder = new MediaRecorder(combinedStream, { mimeType });
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
@@ -125,11 +259,25 @@ export const IngestForm: React.FC = () => {
         const blob = new Blob(chunks, { type: mimeType });
         setCapturedBlob(blob);
         setCapturedUrl(URL.createObjectURL(blob));
-        stream.getTracks().forEach((track) => track.stop());
+        setRecordedHasAudio(audioDetected);
+        combinedStream.getTracks().forEach((track) => track.stop());
+        if (micStreamRef.current) {
+          micStreamRef.current.getTracks().forEach((track) => track.stop());
+          micStreamRef.current = null;
+        }
+        if (animationFrameRef.current) {
+          cancelAnimationFrame(animationFrameRef.current);
+          animationFrameRef.current = null;
+        }
+        if (audioContextRef.current) {
+          audioContextRef.current.close().catch(() => {});
+          audioContextRef.current = null;
+        }
+        setAudioLevel(0);
       };
 
-      if (stream.getVideoTracks()[0]) {
-        stream.getVideoTracks()[0].onended = () => {
+      if (displayStream.getVideoTracks()[0]) {
+        displayStream.getVideoTracks()[0].onended = () => {
           stopScreenCapture();
         };
       }
@@ -149,8 +297,18 @@ export const IngestForm: React.FC = () => {
 
   const stopScreenCapture = () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+    }
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach((t) => t.stop());
     }
     setIsCapturing(false);
   };
@@ -158,6 +316,10 @@ export const IngestForm: React.FC = () => {
   const resetScreenCapture = () => {
     stopScreenCapture();
     setCapturedBlob(null);
+    setRecordedHasAudio(null);
+    setHasAudioTrack(null);
+    setAudioWarning(null);
+    setAudioLevel(0);
     if (capturedUrl) {
       URL.revokeObjectURL(capturedUrl);
       setCapturedUrl(null);
@@ -417,12 +579,35 @@ export const IngestForm: React.FC = () => {
               </div>
             </div>
 
+            {/* INTELIGENTNA ALTERNATYWA: CZY TO YOUTUBE / PORTAL? */}
+            <div className="p-3 bg-cyan-950/40 border border-cyan-500/40 rounded-lg text-xs flex items-start gap-2.5 text-cyan-200">
+              <Sparkles className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="font-bold text-white flex items-center gap-2">
+                  <span>Wolisz prostsze rozwiązanie bez nagrywania ekranu?</span>
+                  <span className="bg-cyan-500/20 text-cyan-300 font-mono text-[9px] px-1.5 py-0.5 rounded border border-cyan-500/40">ZALECANE</span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Dla filmów z <strong>YouTube, Twittera/X, Onetu, TVP, Sejmu czy Facebooka</strong> nie musisz w ogóle nagrywać ekranu! 
+                  Przełącz się na zakładkę{" "}
+                  <button
+                    type="button"
+                    onClick={() => setTab("url")}
+                    className="text-cyan-400 underline font-bold hover:text-cyan-200 cursor-pointer"
+                  >
+                    Adres URL nagrania
+                  </button>{" "}
+                  i po prostu wklej link — serwer pobierze wideo automatycznie w najwyższej jakości z krystalicznym dźwiękiem.
+                </p>
+              </div>
+            </div>
+
             {/* KROK 1: WPROWADŹ LINK I OTWÓRZ W NOWEJ KARCIE */}
             <div className="space-y-2">
               <label className="block text-xs font-semibold text-slate-300 flex items-center justify-between">
                 <span className="flex items-center gap-1.5">
                   <span className="w-4 h-4 rounded-full bg-purple-600 text-white font-mono text-[10px] flex items-center justify-center font-bold">1</span>
-                  <span>Podaj adres strony z wideo i otwórz ją:</span>
+                  <span>Podaj adres strony z wideo i otwórz ją w nowej karcie:</span>
                 </span>
                 <span className="text-[10px] text-purple-400 font-mono">Serwis VOD / Portal informacyjny</span>
               </label>
@@ -463,16 +648,83 @@ export const IngestForm: React.FC = () => {
                   <p className="text-[11px] text-slate-300 pl-6 leading-relaxed">
                     1. <strong>Logowanie:</strong> Jeśli strona wymaga logowania lub subskrypcji — zaloguj się na swoje konto.<br />
                     2. <strong>Odtwarzanie:</strong> Uruchom odtwarzanie materiału wideo i wycisz zbędne karty.<br />
-                    3. <strong>Przejdź do Kroku 2 poniżej</strong>, aby przechwycić obraz i dźwięk bezpośrednio z odtwarzacza.
+                    3. <strong>Wybierz źródło dźwięku poniżej</strong> i kliknij przycisk nagrywania.
                   </p>
                 </div>
               )}
             </div>
 
-            {/* KROK 2: PRZECHWYĆ I NAGRAJ */}
-            <div className="space-y-2 pt-2 border-t border-slate-800/80">
+            {/* KROK 2: WYBÓR ŹRÓDŁA DŹWIĘKU */}
+            <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
+              <label className="block text-xs font-semibold text-slate-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-4 h-4 rounded-full bg-purple-600 text-white font-mono text-[10px] flex items-center justify-center font-bold">2</span>
+                  <span>Wybierz źródło dźwięku (rozwiązanie problemu braku głosu):</span>
+                </span>
+                <span className="text-[10px] font-mono text-cyan-400">Audio Guard</span>
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setAudioSourceMode("tab")}
+                  className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                    audioSourceMode === "tab"
+                      ? "bg-purple-950/80 border-purple-500 text-white shadow-md shadow-purple-950/50"
+                      : "bg-[#0a0f1d] border-slate-800 text-slate-400 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-xs mb-1">
+                    <Volume2 className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Dźwięk karty</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    Czysty dźwięk z odtwarzacza wideo. Wymaga zaznaczenia opcji audio w oknie Chrome.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAudioSourceMode("mic")}
+                  className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                    audioSourceMode === "mic"
+                      ? "bg-amber-950/80 border-amber-500 text-white shadow-md shadow-amber-950/50"
+                      : "bg-[#0a0f1d] border-slate-800 text-slate-400 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-xs mb-1">
+                    <Mic className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Mikrofon komputera</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    Niezawodny! Zbiera dźwięk z głośników laptopa / telewizora. Zero problemów z ustawieniami karty.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setAudioSourceMode("both")}
+                  className={`p-2.5 rounded-lg border text-left transition-all cursor-pointer ${
+                    audioSourceMode === "both"
+                      ? "bg-cyan-950/80 border-cyan-500 text-white shadow-md shadow-cyan-950/50"
+                      : "bg-[#0a0f1d] border-slate-800 text-slate-400 hover:border-slate-700"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 font-bold text-xs mb-1">
+                    <Radio className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Karta + Mikrofon</span>
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    Miks obu ścieżek naraz — słychać zarówno wideo, jak i Twój komentarz na żywo.
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {/* KROK 3: PRZECHWYĆ I NAGRAJ Z PODGLĄDEM I VU-METEREM */}
+            <div className="space-y-3 pt-2 border-t border-slate-800/80">
               <label className="block text-xs font-semibold text-slate-300 flex items-center gap-1.5">
-                <span className="w-4 h-4 rounded-full bg-purple-600 text-white font-mono text-[10px] flex items-center justify-center font-bold">2</span>
+                <span className="w-4 h-4 rounded-full bg-purple-600 text-white font-mono text-[10px] flex items-center justify-center font-bold">3</span>
                 <span>Zarejestruj fragment z odtwarzacza:</span>
               </label>
 
@@ -481,19 +733,26 @@ export const IngestForm: React.FC = () => {
                 <div className="space-y-2">
                   <button
                     type="button"
-                    onClick={startScreenCapture}
-                    className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    onClick={() => startScreenCapture()}
+                    className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer"
                   >
                     <MonitorPlay className="w-4 h-4" />
                     <span>Wybierz kartę i rozpocznij nagrywanie</span>
                   </button>
-                  <p className="text-[10px] text-slate-400 text-center">
-                    💡 W oknie przeglądarki zaznacz zakładkę <strong>„Karta”</strong>, wskaż otwarte wideo i zaznacz opcję <strong>„Udostępnij dźwięk z karty”</strong>.
-                  </p>
+
+                  <div className="p-2.5 bg-slate-900/90 border border-slate-800 rounded-lg text-[11px] text-slate-300 space-y-1">
+                    <div className="flex items-center gap-1.5 text-amber-300 font-bold">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                      <span>Kluczowa wskazówka, aby głos się na pewno nagrał:</span>
+                    </div>
+                    <p className="text-slate-400 leading-relaxed pl-5">
+                      W wyskakującym okienku przeglądarki Chrome wybierz zakładkę <strong>„Karta Chrome”</strong> (nie „Cały ekran”) i zaznacz na dole przełącznik <strong>„Udostępnij dźwięk z karty”</strong>.
+                    </p>
+                  </div>
                 </div>
               )}
 
-              {/* Stan 2B: Trwa nagrywanie */}
+              {/* Stan 2B: Trwa nagrywanie z LIVE VU-METEREM */}
               {isCapturing && (
                 <div className="space-y-3">
                   <div className="relative rounded-lg overflow-hidden border-2 border-red-500/80 bg-black aspect-video flex items-center justify-center shadow-2xl">
@@ -509,6 +768,77 @@ export const IngestForm: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* ŻYWY MIERNIK DŹWIĘKU (VU-METER) */}
+                  <div className="p-3 bg-slate-950/90 border border-slate-800 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between text-xs font-mono">
+                      <div className="flex items-center gap-2">
+                        {hasAudioTrack ? (
+                          audioLevel > 3 ? (
+                            <span className="flex items-center gap-1.5 text-emerald-400 font-bold">
+                              <Volume2 className="w-4 h-4 text-emerald-400 animate-pulse" />
+                              <span>GŁOS WYKRYTY (Rejestrowanie sygnału audio...)</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 text-amber-400">
+                              <Volume2 className="w-4 h-4 text-amber-400" />
+                              <span>Oczekiwanie na dźwięk (włącz odtwarzanie w wideo)</span>
+                            </span>
+                          )
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-red-400 font-bold">
+                            <VolumeX className="w-4 h-4 text-red-400" />
+                            <span>BRAK ŚCIEŻKI AUDIO — DŹWIĘK NIE JEST REJESTROWANY!</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-slate-400">{hasAudioTrack ? `${audioLevel}%` : "0%"}</span>
+                    </div>
+
+                    {/* Słupek głośności VU */}
+                    <div className="w-full bg-slate-900 h-3 rounded-full overflow-hidden border border-slate-800 p-0.5">
+                      <div
+                        className={`h-full rounded-full transition-all duration-75 ${
+                          !hasAudioTrack
+                            ? "bg-red-600 w-full"
+                            : audioLevel > 70
+                            ? "bg-gradient-to-r from-emerald-500 via-amber-400 to-red-500"
+                            : audioLevel > 15
+                            ? "bg-gradient-to-r from-emerald-500 to-teal-400"
+                            : "bg-emerald-500/30"
+                        }`}
+                        style={{ width: hasAudioTrack ? `${Math.max(4, audioLevel)}%` : "100%" }}
+                      />
+                    </div>
+
+                    {audioWarning && (
+                      <div className="p-2 bg-amber-950/60 border border-amber-500/40 rounded text-[11px] text-amber-200 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                        <span>{audioWarning}</span>
+                      </div>
+                    )}
+
+                    {/* Alert ratunkowy, jeśli nie ma audio */}
+                    {!hasAudioTrack && (
+                      <div className="pt-2 flex flex-wrap items-center justify-between gap-2 border-t border-red-900/30">
+                        <span className="text-[11px] text-red-300">
+                          Zapomniano zaznaczyć „Udostępnij dźwięk z karty” w oknie Chrome.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            stopScreenCapture();
+                            setAudioSourceMode("mic");
+                            setTimeout(() => startScreenCapture("mic"), 400);
+                          }}
+                          className="px-3 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-md text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition-all"
+                        >
+                          <Mic className="w-3.5 h-3.5" />
+                          <span>Przełącz teraz na mikrofon</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
                   <button
                     type="button"
                     onClick={stopScreenCapture}
@@ -520,7 +850,7 @@ export const IngestForm: React.FC = () => {
                 </div>
               )}
 
-              {/* Stan 2C: Nagrano materiał */}
+              {/* Stan 2C: Nagrano materiał z weryfikacją dźwięku */}
               {!isCapturing && capturedBlob && (
                 <div className="space-y-3">
                   <div className="relative rounded-lg overflow-hidden border border-emerald-500/60 bg-black aspect-video flex items-center justify-center">
@@ -531,10 +861,20 @@ export const IngestForm: React.FC = () => {
                     />
                   </div>
 
-                  <div className="flex items-center justify-between p-3 bg-emerald-950/40 border border-emerald-500/40 rounded-lg text-xs font-mono text-emerald-300">
+                  {/* Status audio w nagranym pliku */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900/80 border border-slate-800 rounded-lg text-xs font-mono">
                     <div className="flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                      <span>Zarejestrowano pomyślnie: {formatTimer(captureSeconds)}</span>
+                      {recordedHasAudio ? (
+                        <div className="flex items-center gap-1.5 text-emerald-300">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>Zarejestrowano wideo i dźwięk: <strong>{formatTimer(captureSeconds)}</strong> (włącz dźwięk w odtwarzaczu powyżej, by sprawdzić)</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-amber-300">
+                          <AlertTriangle className="w-4 h-4 text-amber-400" />
+                          <span>Zarejestrowano wideo: <strong>{formatTimer(captureSeconds)}</strong> (brak ścieżki audio — zalecamy nagrać ponownie z dźwiękiem)</span>
+                        </div>
+                      )}
                     </div>
                     <button
                       type="button"
@@ -545,6 +885,37 @@ export const IngestForm: React.FC = () => {
                       Nagraj ponownie
                     </button>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* SEKCJA: CZARNY EKRAN W VOD / OCHRONA DRM W CHROME */}
+            <div className="p-3 bg-purple-950/20 border border-purple-800/40 rounded-xl text-xs space-y-2">
+              <button
+                type="button"
+                onClick={() => setShowDrmGuide(!showDrmGuide)}
+                className="w-full flex items-center justify-between font-bold text-purple-200 hover:text-white transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-purple-400" />
+                  <span>Czarny ekran lub blokada w TVN24 / VOD? Jak odblokować w 15 sekund</span>
+                </span>
+                {showDrmGuide ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+
+              {showDrmGuide && (
+                <div className="pt-2 text-[11px] text-purple-200 space-y-2 border-t border-purple-800/50 leading-relaxed animate-fadeIn">
+                  <p className="text-slate-300">
+                    Serwisy VOD (np. TVN24 GO, Canal+, Polsat Box Go, TVP VOD) stosują zabezpieczenie DRM (Widevine). Kiedy przeglądarka korzysta ze sprzętowej akceleracji grafiki, nagrywany obraz staje się czarny.
+                  </p>
+                  <div className="bg-black/60 p-3 rounded-lg border border-purple-700/50 space-y-1.5 font-mono text-[11px] text-purple-200">
+                    <div><strong>1.</strong> Wpisz w pasku adresu przeglądarki Chrome/Edge: <code className="text-cyan-300 bg-purple-950 px-1.5 py-0.5 rounded border border-purple-800">chrome://settings/system</code></div>
+                    <div><strong>2.</strong> Wyłącz opcję: <strong>„Użyj akceleracji graficznej, gdy jest dostępna”</strong> (Hardware acceleration).</div>
+                    <div><strong>3.</strong> Kliknij <strong>Uruchom ponownie</strong> obok tej opcji w Chrome.</div>
+                  </div>
+                  <p className="text-emerald-300 text-[10px] font-bold">
+                    ✨ Po tym prostym zabiegu żaden serwis VOD nie wyświetli już czarnego ekranu przy nagrywaniu karty!
+                  </p>
                 </div>
               )}
             </div>

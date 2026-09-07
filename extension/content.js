@@ -10,6 +10,7 @@
   let timerInterval = null;
   let secondsElapsed = 0;
   let isRecording = false;
+  let hasAudioTrack = true;
 
   // Sprawdź czy strona zawiera odtwarzacz wideo
   function findVideoElement() {
@@ -78,16 +79,26 @@
           <button class="eprofiler-btn eprofiler-btn-primary" id="eprofiler-start-btn">
             ⏺️ Rozpocznij nagrywanie wideo
           </button>
+          
+          <p style="font-size: 10px; color: #f59e0b; margin: 8px 0 0 0; line-height: 1.35;">
+            💡 <strong>Dźwięk:</strong> W oknie Chrome zaznacz kartę i włącz przełącznik <strong>„Udostępnij dźwięk z karty”</strong> na dole, aby nagrać głos.
+          </p>
         `
             : `
-          <div class="eprofiler-status-box eprofiler-status-rec">
-            <span>🔴 REJESTRACJA STRUMIENIA</span>
+          <div class="eprofiler-status-box ${hasAudioTrack ? "eprofiler-status-rec" : "eprofiler-status-warn"}">
+            <span>${hasAudioTrack ? "🔴 REC // 🔊 GŁOS AKTYWNY" : "⚠️ REC // 🔇 BRAK GŁOSU!"}</span>
             <span>${formatTime(secondsElapsed)}</span>
           </div>
 
-          <p style="font-size: 11px; color: #94a3b8; margin: 0; line-height: 1.4;">
-            Trwa nagrywanie wystąpienia. Nagraj kluczowy fragment (od 30 sek. do paru minut) i zakończ nagranie.
-          </p>
+          ${
+            !hasAudioTrack
+              ? `<p style="font-size: 11px; color: #f87171; font-weight: bold; margin: 6px 0; line-height: 1.3;">
+                  ⚠️ Uwaga: Karta została wybrana bez dźwięku! Przeglądarka nie rejestruje głosu. Zakończ i zaznacz „Udostępnij dźwięk z karty”.
+                 </p>`
+              : `<p style="font-size: 11px; color: #94a3b8; margin: 0; line-height: 1.4;">
+                  Trwa nagrywanie wystąpienia. Nagraj kluczowy fragment (od 30 sek. do paru minut) i zakończ nagranie.
+                 </p>`
+          }
 
           <button class="eprofiler-btn eprofiler-btn-danger" id="eprofiler-stop-btn">
             ⏹️ Zakończ i profiluj w E-PROFILERZE
@@ -123,6 +134,8 @@
       });
 
       captureStream = stream;
+      const audioTracks = stream.getAudioTracks();
+      hasAudioTrack = audioTracks.length > 0;
 
       const mimeType = MediaRecorder.isTypeSupported("video/webm;codecs=vp8,opus")
         ? "video/webm;codecs=vp8,opus"
