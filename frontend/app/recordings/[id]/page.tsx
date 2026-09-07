@@ -259,6 +259,16 @@ export default function RecordingDetailPage() {
             <span className="hidden sm:inline">Pojedynek 1-na-1</span>
           </Link>
 
+          {/* Przycisk przejścia do kokpitu studyjnego na żywo */}
+          <Link
+            href={`/cockpit?recordingId=${recording.id}`}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-300 bg-rose-950/60 hover:bg-rose-900/80 border border-rose-500/40 px-3 py-1.5 rounded-lg transition-all shadow-sm hover:border-rose-400"
+            title="Uruchom Kokpit Studyjny na żywo dla tego nagrania / polityka"
+          >
+            <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
+            <span className="hidden sm:inline">Kokpit na żywo (iPad)</span>
+          </Link>
+
           {/* Przycisk pobierania eleganckiego raportu PDF */}
           <a
             href={getRecordingPdfUrl(recording.id, activeRelation)}

@@ -58,6 +58,13 @@ export const AppHeader: React.FC = () => {
               <span className="text-slate-600">//</span> Pojedynek 1-na-1
             </Link>
             <Link
+              href="/cockpit"
+              className="hover:text-rose-400 transition-colors flex items-center gap-1.5 text-rose-400 font-bold whitespace-nowrap flex-shrink-0"
+              title="Kokpit studyjny na żywo dla polityka w studio na iPadzie"
+            >
+              <span className="text-slate-600">//</span> 🔴 Kokpit studyjny (iPad)
+            </Link>
+            <Link
               href="/help"
               className="hover:text-cyan-400 transition-colors flex items-center gap-1.5 whitespace-nowrap flex-shrink-0"
             >
