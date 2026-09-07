@@ -53,6 +53,7 @@ export default function RecordingDetailPage() {
   const [isSwitchingSpeaker, setIsSwitchingSpeaker] = useState(false);
   const [customPoliticianName, setCustomPoliticianName] = useState("");
   const [modalRelation, setModalRelation] = useState<PoliticianRelation>("sojusznik");
+  const [activeRelation, setActiveRelation] = useState<PoliticianRelation>("sojusznik");
   const [switchingError, setSwitchingError] = useState<string | null>(null);
   const [seekToTimeSec, setSeekToTimeSec] = useState<number | null>(null);
 
@@ -74,6 +75,7 @@ export default function RecordingDetailPage() {
       }
       if (data.relacja_polityka) {
         setModalRelation(data.relacja_polityka);
+        setActiveRelation(data.relacja_polityka);
       }
     } catch (err: any) {
       setError(err.message || "Nie udało się załadować nagrania.");
@@ -87,7 +89,9 @@ export default function RecordingDetailPage() {
   }, [id]);
 
   const handleToggleRelation = async (newRelation: PoliticianRelation) => {
-    // 1. Natychmiastowa aktualizacja stanu lokalnego (brak opóźnień w interfejsie)
+    // 1. Natychmiastowa zmiana stanu React — 0 ms opóźnienia
+    setActiveRelation(newRelation);
+    setModalRelation(newRelation);
     setRecording((prev) => {
       if (!prev) return prev;
       return {
@@ -95,9 +99,8 @@ export default function RecordingDetailPage() {
         relacja_polityka: newRelation,
       };
     });
-    setModalRelation(newRelation);
 
-    // 2. Trwały zapis w bazie
+    // 2. Trwały zapis na serwerze i w Supabase
     try {
       const updated = await setTargetSpeaker(id, {
         speaker_tag: targetTag,
@@ -106,7 +109,10 @@ export default function RecordingDetailPage() {
         relacja: newRelation,
       });
       if (updated) {
-        setRecording(updated);
+        setRecording({
+          ...updated,
+          relacja_polityka: newRelation,
+        });
       }
     } catch (err: any) {
       console.warn("Błąd zapisu nowej relacji na serwerze:", err);
@@ -176,7 +182,7 @@ export default function RecordingDetailPage() {
 
   const targetName = recording.polityk_docelowy || "Główny badany polityk";
   const targetTag = recording.speaker_docelowy_tag || "SPEAKER_01";
-  const isAdversary = recording.relacja_polityka === "przeciwnik";
+  const isAdversary = activeRelation === "przeciwnik";
 
   // Domyślna lista mówców jeśli nagranie jeszcze nie ma diaryzacji
   const speakersList: DetectedSpeaker[] = recording.rozpoznani_mowcy && recording.rozpoznani_mowcy.length > 0

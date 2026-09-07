@@ -259,7 +259,22 @@ export async function setTargetSpeaker(
   recordingId: string,
   payload: { speaker_tag: string; imie_nazwisko?: string; rola?: string; relacja?: PoliticianRelation }
 ): Promise<Recording> {
-  // 1. Bezpośredni zapis w bazie Supabase jeśli jest skonfigurowana
+  // 1. Serwerless endpoint z uprawnieniami Service Role
+  try {
+    const res = await fetch(`/api/recordings/${recordingId}/target-speaker`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return normalizeRecording(data);
+    }
+  } catch (err) {
+    console.warn("Serverless target-speaker update failed:", err);
+  }
+
+  // 2. Bezpośredni zapis w bazie Supabase jeśli jest skonfigurowana
   if (SUPABASE_URL && SUPABASE_ANON_KEY) {
     try {
       const updateData: Record<string, any> = {
