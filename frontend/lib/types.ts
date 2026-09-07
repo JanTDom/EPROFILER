@@ -1,4 +1,5 @@
 export type RecordingType = "wywiad" | "debata" | "przemowienie";
+export type PoliticianRelation = "sojusznik" | "przeciwnik";
 
 export type ProcessingStatus = 
   | "OCZEKUJE"
@@ -41,6 +42,7 @@ export interface Recording {
   zakres_analizy?: "pelny" | "behawioralny";
   polityk_docelowy?: string;
   rola_polityka?: string;
+  relacja_polityka?: PoliticianRelation;
   speaker_docelowy_tag?: string;
   format_materialu?: "wideo" | "audio";
   rozpoznani_mowcy?: DetectedSpeaker[];
@@ -166,6 +168,35 @@ export interface PoliticalMarketingData {
   rekomendacje_sztabowe: string[];
 }
 
+export interface ArgumentativeAttackVector {
+  tytul_wektora: string;
+  cytat_przeciwnika?: string;
+  diagnoza_slabosci: string;
+  rekomendowany_atak_lub_pulapka: string;
+  zastosowanie_w_debacie?: string;
+}
+
+export interface PersonalityAttackVector {
+  trigger_emocjonalny: string;
+  objaw_behawioralny?: string;
+  mechanizm_psychologiczny?: string;
+  jak_wyprowadzic_z_rownowagi: string;
+}
+
+export interface SpotAmmunitionItem {
+  cytat_samobojczy: string;
+  kontekst_ataku: string;
+}
+
+export interface AdversaryAnalysisData {
+  glowna_podatnosc_oponenta: string;
+  ocena_podatnosci_na_atak_1_10: number;
+  punkty_wejscia_argumentacyjne: ArgumentativeAttackVector[];
+  punkty_wejscia_osobowosciowe: PersonalityAttackVector[];
+  amunicja_uderzeniowa_do_spotow: SpotAmmunitionItem[];
+  rekomendacje_ofensywne_dla_naszego_sztabu: string[];
+}
+
 export interface PsychometricProfile {
   id: string;
   recording_id: string;
@@ -191,6 +222,7 @@ export interface PsychometricProfile {
   surowe_wnioski_ai?: {
     temat_rozmowy?: string;
     marketing_polityczny?: PoliticalMarketingData;
+    analiza_przeciwnika?: AdversaryAnalysisData;
     wnioski?: Record<string, string>;
     [key: string]: any;
   };

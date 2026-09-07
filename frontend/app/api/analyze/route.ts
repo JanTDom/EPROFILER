@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     let enableBiometrics = true;
     let customApiKeyParam: string | null = null;
     let formatMaterialuParam: string | null = null;
+    let politicianRelation: "sojusznik" | "przeciwnik" = "sojusznik";
 
     if (isMultipart) {
       const formData = await request.formData();
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
       title = (formData.get("tytul") as string)?.trim() || null;
       targetPerson = (formData.get("polityk_docelowy") as string)?.trim() || null;
       politicianRole = (formData.get("rola_polityka") as string)?.trim() || "Badany polityk";
+      politicianRelation = ((formData.get("relacja_polityka") as string) || "sojusznik") as "sojusznik" | "przeciwnik";
       recordingType = (formData.get("typ_nagrania") as string) || "wywiad";
       scope = (formData.get("zakres_analizy") as string) || "pelny";
       profileId = (formData.get("profile_id") as string) || "profile_main";
@@ -63,6 +65,7 @@ export async function POST(request: Request) {
       title = body.tytul?.trim() || null;
       targetPerson = body.polityk_docelowy?.trim() || null;
       politicianRole = body.rola_polityka?.trim() || "Badany polityk";
+      politicianRelation = (body.relacja_polityka || "sojusznik") as "sojusznik" | "przeciwnik";
       recordingType = body.typ_nagrania || "wywiad";
       scope = body.zakres_analizy || "pelny";
       profileId = body.profile_id || "profile_main";
@@ -119,6 +122,7 @@ export async function POST(request: Request) {
       profile_id: profileId,
       polityk_docelowy: targetPerson,
       rola_polityka: politicianRole,
+      relacja_polityka: politicianRelation,
       format_materialu: formatMaterialuFinal,
       tryb_biometryczny: enableBiometrics,
       zakres_analizy: scope,
@@ -143,7 +147,188 @@ export async function POST(request: Request) {
       ? `Główny cel profilowania wskazany przez użytkownika: ${targetPerson}.`
       : "Kluczowa zasada — identyfikacja osoby diagnozowanej z kontekstu: Z powitań, zapowiedzi redakcyjnych („W studiu gościmy...”, „Naszym gościem jest...”), zwrotów formalnych („Panie pośle/ministrze/premierze...”) oraz dynamiki pytań i odpowiedzi bezbłędnie wywnioskuj z kontekstu rozmowy, kim jest badany gość / polityk / ekspert (osoba diagnozowana). Oznacz go jako 'jest_celem': true.";
 
-    const promptText = isAudio
+    const isAdversary = politicianRelation === "przeciwnik";
+
+    const promptText = isAdversary
+      ? (isAudio
+        ? `Przesłuchaj i przeanalizuj w całości to nagranie dźwiękowe / audio (podcast, wywiad radiowy, nagranie ze studia lub telefonu). ${targetInfo}
+UWAGA: BADANA OSOBA ZOSTAŁA OZNACZONA JAKO PRZECIWNIK / OPONENT NASZEGO SZTABU (RELACJA: PRZECIWNIK).
+PAMIĘTAJ: Wrogiem/oponentem może być:
+- wrogi polityk / kontrkandydat,
+- stronniczy, agresywny lub dociekliwy dziennikarz / redaktor prowadzący wywiad,
+- działacz społeczny / aktywista / publicysta adwersarzy.
+
+ZASADY AUDYTU PRZECIWNIKA (OPPOSITION RESEARCH & WEKTORY ATAKU):
+1. ZERO WSKAZAŃ SZTABOWYCH DLA NIEGO: Oponenta nie szkolimy, nie doradzamy mu jak ma mówić ani jak poprawiać błędy. Raport służy WYŁĄCZNIE naszemu zespołowi do jego zneutralizowania, zdemaskowania i wygrania starcia.
+2. PUNKTY WEJŚCIA OSOBOWOŚCIOWE I SŁABOŚCI PSYCHICZNE (SZALENIE WAŻNE — JAK GO WYPROWADZIĆ Z RÓWNOWAGI):
+   - Wyzwalacze emocjonalne (triggery): co go natychmiast drażni i uderza w jego ego, jakie tematy, zwroty, gesty lub zarzuty wyprowadzają go z równowagi.
+   - Reakcje aparatu mowy zdradzające pęknięcie i lęk: nagłe skoki tonu F0, załamania głosu, drżenie (pitch jitter/shimmer), spłycenie oddechu, nerwowy chichot, agresywna intonacja.
+   - INSTRUKCJA DESTABILIZACJI: Konkretne wskazówki behawioralne i psychologiczne dla naszego rozmówcy — jak zachować się w studiu (np. jak zbić z pantałyku agresywnego dziennikarza, jak podważyć jego bezstronność, jak zareagować spokojnym uśmiechem na jego prowokację), aby oponent stracił panowanie nad sobą i okazał słabość przed słuchaczami.
+3. PUNKTY WEJŚCIA ARGUMENTACYJNE (MERYTORYCZNE I LOGICZNE):
+   - Wskaż luki logiczne, kłamstwa, podwójne standardy, sprzeczności narracyjne oraz tematy, od których ucieka (uniki).
+   - Gotowe pytania-pułapki i riposty uderzeniowe, które zamykają mu drogę ucieczki.
+4. AMUNICJA UDERZENIOWA DO SPOTÓW I MEDIÓW:
+   - Wskaż samobójcze cytaty do natychmiastowego wycięcia na rolki i spoty kompromitujące.
+5. OCENA PODATNOŚCI NA ATAK (1-10): Gdzie 1 oznacza oponenta odpornego, a 10 oznacza oponenta skrajnie kruchego i łatwego do dekompozycji pod presją.
+6. FORMAT: Czysta polszczyzna, sentence case, odpowiedź wyłącznie poprawnym JSON-em.
+
+Zwróć poprawny JSON o schemacie:
+{
+  "tytul_wideo": "Tytuł lub dokładny temat rozmowy (np. Imię Nazwisko: Temat)",
+  "czas_trwania_sek": 600,
+  "temat_rozmowy": "Obszerny, 2-4 zdaniowy opis w sentence case, o czym dokładnie jest to nagranie",
+  "rozpoznani_mowcy": [
+    {
+      "speaker_tag": "SPEAKER_00",
+      "imie_nazwisko": "Imię i nazwisko",
+      "rola": "Dziennikarz / prowadzący | Badana osoba (oponent) | Uczestnik",
+      "opis": "Zwięzły opis roli w rozmowie",
+      "jest_celem": true
+    }
+  ],
+  "wybrany_speaker_tag": "SPEAKER_XX",
+  "profil_psychometryczny_wielka_piatka": {
+    "otwartosc": 65,
+    "sumiennosc": 58,
+    "ekstrawersja": 72,
+    "ugodowosc": 45,
+    "neurotyzm": 40,
+    "dominacja_vs_uleglosc": 0.35,
+    "wrogosc_vs_cieplo": 0.10
+  },
+  "wnioski": {
+    "nastroje_i_emocje": "Diagnoza stanu nerwowego i emocji oponenta z cytatami (3-5 zdań)",
+    "glowne_uniki_i_taktyka": "Jak oponent manipuluje i ucieka od trudnych wątków (3-5 zdań)",
+    "czule_punkty_stres": "Dokładne momenty paniki, załamania głosu i przyspieszenia oddechu (3-5 zdań)",
+    "spojnosc_mowy_ze_slowami": "Gdzie aparat mowy zdradza dysonans lub nieszczerość (3-5 zdań)",
+    "sila_argumentacji": "Słabości logiczne i brak twardych argumentów oponenta (3-5 zdań)",
+    "czy_odbiorcy_to_kupia": "Diagnoza odbioru przez słuchaczy i gdzie oponent traci wiarygodność (3-5 zdań)",
+    "pojedynek_z_adwersarzami": "Ocena odporności na presję i jak łatwo zepchnąć go do defensywy (3-5 zdań)"
+  },
+  "analiza_przeciwnika": {
+    "glowna_podatnosc_oponenta": "Obszerna diagnoza największych słabości oponenta (3-4 zdania)",
+    "ocena_podatnosci_na_atak_1_10": 8,
+    "punkty_wejscia_argumentacyjne": [
+      {
+        "tytul_wektora": "Tytuł słabego punktu w sentence case",
+        "cytat_przeciwnika": "Dosłowny cytat oponenta z nagrania",
+        "diagnoza_slabosci": "Na czym polega fałsz, manipulacja lub brak logiki",
+        "rekomendowany_atak_lub_pulapka": "Gotowe pytanie-pułapka lub riposta uderzeniowa do zadania w debacie",
+        "zastosowanie_w_debacie": "Wskazówka taktyczna kiedy i jak odpalić ten atak"
+      }
+    ],
+    "punkty_wejscia_osobowosciowe": [
+      {
+        "trigger_emocjonalny": "Co natychmiast uderza w jego ego i wywołuje irytację",
+        "objaw_behawioralny": "Reakcja aparatu mowy (drżenie głosu, spłycenie oddechu, ton napastliwy)",
+        "mechanizm_psychologiczny": "Dlaczego ten temat łamie jego opanowanie (kompleks, niepewność, urażona pycha)",
+        "jak_wyprowadzic_z_rownowagi": "Instrukcja psychologiczna jak go sprowokować do utraty kontroli w rozmowie"
+      }
+    ],
+    "amunicja_uderzeniowa_do_spotow": [
+      {
+        "cytat_samobojczy": "Dosłowny, kompromitujący cytat oponenta",
+        "kontekst_ataku": "Jak wykorzystać to w spotach i mediach przeciwko niemu"
+      }
+    ],
+    "rekomendacje_ofensywne_dla_naszego_sztabu": [
+      "Dyrektywa ofensywna 1 dla naszego zespołu",
+      "Dyrektywa ofensywna 2",
+      "Dyrektywa ofensywna 3",
+      "Dyrektywa ofensywna 4"
+    ]
+  }
+}`
+        : `Obejrzyj i przeanalizuj w całości to nagranie wideo. ${targetInfo}
+UWAGA: BADANA OSOBA ZOSTAŁA OZNACZONA JAKO PRZECIWNIK / OPONENT NASZEGO SZTABU (RELACJA: PRZECIWNIK).
+PAMIĘTAJ: Wrogiem/oponentem może być:
+- wrogi polityk / kontrkandydat,
+- stronniczy, agresywny lub dociekliwy dziennikarz / redaktor prowadzący wywiad,
+- działacz społeczny / aktywista / publicysta adwersarzy.
+
+ZASADY AUDYTU PRZECIWNIKA (OPPOSITION RESEARCH & WEKTORY ATAKU):
+1. ZERO WSKAZAŃ SZTABOWYCH DLA NIEGO: Oponenta nie szkolimy, nie doradzamy mu jak ma mówić ani jak poprawiać błędy. Raport służy WYŁĄCZNIE naszemu zespołowi do jego zneutralizowania, zdemaskowania i wygrania starcia.
+2. PUNKTY WEJŚCIA OSOBOWOŚCIOWE I SŁABOŚCI PSYCHICZNE (SZALENIE WAŻNE — JAK GO WYPROWADZIĆ Z RÓWNOWAGI):
+   - Wyzwalacze emocjonalne (triggery): jakie tematy, pytania, uwagi czy gesty natychmiast uderzają w jego kompleksy, dumę lub poczucie wyższości.
+   - Objawy dekompozycji w mimice i mowie ciała (FACS): mikroekspresje złości AU4+AU23, uśmieszki pogardy AU14, zaciskanie warg AU24, nerwowe mruganie, unikanie wzroku, spięcie barków, drżenie głosu.
+   - INSTRUKCJA DESTABILIZACJI: Precyzyjna instrukcja psychologiczna i behawioralna dla naszego kandydata/rozmówcy — jak zachować się w studiu (np. chłodny spokój, ironia, twarde liczby, zignorowanie zarzutu, punktowanie stronniczości dziennikarza), aby oponent stracił panowanie nad sobą, stał się agresywny lub bezradny na wizji.
+3. PUNKTY WEJŚCIA ARGUMENTACYJNE (MERYTORYCZNE I LOGICZNE):
+   - Wskaż bezlitośnie jego wewnętrzne sprzeczności, fałszywe dane, puste obietnice, podwójne standardy i sofizmaty.
+   - Wskaż uniki i tematy, od których ucieka — miejsca, w których nasz kandydat lub gość w studiu musi go bezwzględnie docisnąć.
+   - Do każdego słabego punktu przygotuj gotowe, bezwzględne pytanie-pułapkę lub ripostę uderzeniową zamykającą drogę ucieczki.
+4. AMUNICJA UDERZENIOWA DO SPOTÓW I SOCIAL MEDIÓW:
+   - Wskaż najbardziej kompromitujące cytaty i momenty oponenta ('samobóje') do natychmiastowego wycięcia na spoty, paski i rolki.
+5. OCENA PODATNOŚCI NA ATAK (1-10): 1 - oponent odporny, 10 - skrajnie kruchy i łatwy do sprowokowania pod presją.
+6. FORMAT: Sentence case, czysta polszczyzna, odpowiedź wyłącznie poprawnym JSON-em.
+
+Zwróć poprawny JSON o schemacie:
+{
+  "tytul_wideo": "Tytuł lub dokładny temat rozmowy (np. Imię Nazwisko: Temat)",
+  "czas_trwania_sek": 600,
+  "temat_rozmowy": "Obszerny, 2-4 zdaniowy opis w sentence case, o czym dokładnie jest to nagranie",
+  "rozpoznani_mowcy": [
+    {
+      "speaker_tag": "SPEAKER_00",
+      "imie_nazwisko": "Imię i nazwisko",
+      "rola": "Dziennikarz / prowadzący | Badana osoba (oponent) | Uczestnik",
+      "opis": "Zwięzły opis roli w rozmowie",
+      "jest_celem": true
+    }
+  ],
+  "wybrany_speaker_tag": "SPEAKER_XX",
+  "profil_psychometryczny_wielka_piatka": {
+    "otwartosc": 65,
+    "sumiennosc": 58,
+    "ekstrawersja": 72,
+    "ugodowosc": 45,
+    "neurotyzm": 40,
+    "dominacja_vs_uleglosc": 0.35,
+    "wrogosc_vs_cieplo": 0.10
+  },
+  "wnioski": {
+    "nastroje_i_emocje": "Diagnoza stanu nerwowego i emocji oponenta z cytatami (3-5 zdań)",
+    "glowne_uniki_i_taktyka": "Jak oponent manipuluje i ucieka od trudnych wątków (3-5 zdań)",
+    "czule_punkty_stres": "Dokładne momenty paniki, załamania głosu i przyspieszenia oddechu (3-5 zdań)",
+    "spojnosc_mowy_ze_slowami": "Gdzie aparat mowy i mimika FACS zdradzają dysonans lub nieszczerość (3-5 zdań)",
+    "sila_argumentacji": "Słabości logiczne i brak twardych argumentów oponenta (3-5 zdań)",
+    "czy_odbiorcy_to_kupia": "Diagnoza odbioru przez widzów i gdzie oponent traci wiarygodność (3-5 zdań)",
+    "pojedynek_z_adwersarzami": "Ocena odporności na presję i jak łatwo zepchnąć go do defensywy (3-5 zdań)"
+  },
+  "analiza_przeciwnika": {
+    "glowna_podatnosc_oponenta": "Obszerna diagnoza największych słabości oponenta (3-4 zdania)",
+    "ocena_podatnosci_na_atak_1_10": 8,
+    "punkty_wejscia_argumentacyjne": [
+      {
+        "tytul_wektora": "Tytuł słabego punktu w sentence case",
+        "cytat_przeciwnika": "Dosłowny cytat oponenta z nagrania",
+        "diagnoza_slabosci": "Na czym polega fałsz, manipulacja lub brak logiki",
+        "rekomendowany_atak_lub_pulapka": "Gotowe pytanie-pułapka lub riposta uderzeniowa do zadania w debacie",
+        "zastosowanie_w_debacie": "Wskazówka taktyczna kiedy i jak odpalić ten atak"
+      }
+    ],
+    "punkty_wejscia_osobowosciowe": [
+      {
+        "trigger_emocjonalny": "Co natychmiast uderza w jego ego i wywołuje irytację",
+        "objaw_behawioralny": "Reakcja aparatu mowy i ciała (drżenie głosu, AU14, nerwowe mruganie, unikanie wzroku)",
+        "mechanizm_psychologiczny": "Dlaczego ten temat łamie jego opanowanie (kompleks, niepewność, urażona pycha)",
+        "jak_wyprowadzic_z_rownowagi": "Instrukcja psychologiczna jak go sprowokować i wyprowadzić z równowagi w debacie lub studiu"
+      }
+    ],
+    "amunicja_uderzeniowa_do_spotow": [
+      {
+        "cytat_samobojczy": "Dosłowny, kompromitujący cytat oponenta",
+        "kontekst_ataku": "Jak wykorzystać to w spotach i mediach przeciwko niemu"
+      }
+    ],
+    "rekomendacje_ofensywne_dla_naszego_sztabu": [
+      "Dyrektywa ofensywna 1 dla naszego zespołu",
+      "Dyrektywa ofensywna 2",
+      "Dyrektywa ofensywna 3",
+      "Dyrektywa ofensywna 4"
+    ]
+  }
+}`)
+      : (isAudio
       ? `Przesłuchaj i przeanalizuj w całości to nagranie dźwiękowe / audio (podcast, wywiad radiowy, nagranie z dyktafonu lub telefonu). ${targetInfo}
 Zakres profilowania: ${scope === "pelny" ? "Pełny, wyczerpujący audyt sztabowy głosu i retoryki (psychologia głosu, prozodia, nielogiczności, marketing polityczny, warsztat)" : "Tylko stan psychiczny i akustyka głosu"}.
 
@@ -154,7 +339,105 @@ Specjalne wytyczne dla nagrania audio:
 4. Bezwzględna czujność i brak taryfy ulgowej: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach.
 5. Maksymalna szczegółowość i gęstość informacyjna: Nie twórz skrótów ani jednozdaniowych podsumowań! Podaj minimum 4-6 rozbudowanych atutów, 4-6 kardynalnych błędów z dokładnymi cytatami, 4-6 wycieków emocjonalnych w głosie, 3-5 luk logicznych, 3-5 ryzykownych wypowiedzi dla oponentów, 4-6 gotowych ripost sztabowych („Zamiast X -> Mów Y”) oraz 5-8 dyrektyw strategicznych.
 6. Kalibracja oceny: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
-7. Format językowy: W zdaniu tylko pierwsza litera pierwszego wyrazu ma być wielka, chyba że gdzieś jest nazwa własna. Czysta polszczyzna, odpowiedź wyłącznie poprawnym JSON-em.`
+7. Format językowy: W zdaniu tylko pierwsza litera pierwszego wyrazu ma być wielka, chyba że gdzieś jest nazwa własna. Czysta polszczyzna, odpowiedź wyłącznie poprawnym JSON-em.
+
+Zwróć poprawny JSON o schemacie:
+{
+  "tytul_wideo": "Tytuł lub dokładny temat rozmowy (np. Imię Nazwisko: Temat)",
+  "czas_trwania_sek": 600,
+  "temat_rozmowy": "Obszerny, 2-4 zdaniowy opis w sentence case, o czym dokładnie jest to nagranie",
+  "rozpoznani_mowcy": [
+    {
+      "speaker_tag": "SPEAKER_00",
+      "imie_nazwisko": "Imię i nazwisko",
+      "rola": "Dziennikarz / prowadzący | Badany polityk | Kontrkandydat",
+      "opis": "Zwięzły opis roli w rozmowie",
+      "jest_celem": true
+    }
+  ],
+  "wybrany_speaker_tag": "SPEAKER_XX",
+  "profil_psychometryczny_wielka_piatka": {
+    "otwartosc": 65,
+    "sumiennosc": 58,
+    "ekstrawersja": 72,
+    "ugodowosc": 45,
+    "neurotyzm": 40,
+    "dominacja_vs_uleglosc": 0.35,
+    "wrogosc_vs_cieplo": 0.10
+  },
+  "wnioski": {
+    "nastroje_i_emocje": "Rozbudowana diagnoza nastroju, stabilności i energii badanego z cytatami (3-5 zdań)",
+    "glowne_uniki_i_taktyka": "Szczegółowa analiza taktyki rozmowy, unikania trudnych wątków i defensywy z cytatami (3-5 zdań)",
+    "czule_punkty_stres": "Dekonstrukcja momentów podwyższonego napięcia i pytań, które wywołały dekompozycję (3-5 zdań)",
+    "spojnosc_mowy_ze_slowami": "Ocena czy ton głosu i mowa ciała współgrają ze słowami, czy występuje dysonans poznawczy (3-5 zdań)",
+    "sila_argumentacji": "Rygorystyczna ocena logicznej spójności, wagi merytorycznej i proporcji faktów do erystyki (3-5 zdań)",
+    "czy_odbiorcy_to_kupia": "Diagnoza autentyczności i wiarygodności w oczach wyborców (3-5 zdań)",
+    "pojedynek_z_adwersarzami": "Ocena dominacji, kontroli nad narracją i odporności na presję dziennikarza (3-5 zdań)"
+  },
+  "marketing_polityczny": {
+    "werdykt": "Występ poprawny z zastrzeżeniami | Bilans mieszany ze wskazaniem na błędy | Sukces wizerunkowy | Porażka wizerunkowa",
+    "ocena_punktowa_1_10": 6,
+    "uzasadnienie_werdyktu": "Rozbudowane, 3-5 zdaniowe uzasadnienie werdyktu",
+    "glowne_plusy": [
+      {
+        "nazwa_atutu": "Tytuł atutu w sentence case",
+        "cytat_lub_moment": "Dosłowny cytat z nagrania",
+        "dlaczego_to_plus": "Precyzyjne i wyczerpujące wyjaśnienie dlaczego to atut wizerunkowy"
+      }
+    ],
+    "popelnione_bledy_i_minusy": [
+      {
+        "nazwa_bledu": "Tytuł błędu w sentence case",
+        "cytat_lub_moment": "Dosłowny cytat pokazujący moment błędu",
+        "dlaczego_to_minus": "Krytyczna dekonstrukcja uchybienia i szkody politycznej"
+      }
+    ],
+    "niepozadane_emocje_i_mowa_ciala": [
+      {
+        "reakcja_lub_emocja": "Nazwa niepożądanej emocji lub cechy głosu",
+        "cytat_lub_moment": "Dosłowny cytat lub moment w nagraniu",
+        "dlaczego_to_szkodliwe": "Dlaczego liderowi nie wolno tego okazywać",
+        "zalecenie_sztabowe": "Konkretna technika wygaszenia tego nawyku"
+      }
+    ],
+    "nielogicznosci_i_luki_argumentacyjne": [
+      {
+        "luka_lub_sprzecznosc": "Nazwa błędu logicznego lub sofizmatu",
+        "cytat_lub_moment": "Fragment wypowiedzi",
+        "diagnoza_logiczna": "Na czym polega brak logiki lub sprzeczność",
+        "ryzyko_kontrataku": "Jak oponent może bezlitośnie to obrócić przeciw politykowi"
+      }
+    ],
+    "amunicja_dla_oponentow": [
+      {
+        "cytat_ryzykowny": "Niefortunny cytat ('samobój')",
+        "potencjalne_uderzenie_opozycji": "Jak sztab przeciwników wytnie to na spoty i paski w mediach"
+      }
+    ],
+    "gotowe_riposty_zamiast_bledow": [
+      {
+        "kontekst_pytania": "Trudne pytanie dziennikarza",
+        "co_powiedzial": "Błędna odpowiedź polityka z nagrania",
+        "rekomendowana_riposta": "Gotowa, optymalna formuła sztabowa z przekierowaniem na własny temat"
+      }
+    ],
+    "warsztat_mowy_i_dykcji": "Ocena techniczna: tempo mowy, intonacja, pauzy retoryczne i praca z oddechem",
+    "nosnosc_medialna_soundbites": "Wybór najlepszej 'setki' do serwisów informacyjnych wraz z cytatem",
+    "wplyw_na_elektorat": {
+      "twardy_elektorat": "Diagnoza odbioru przez bazowy elektorat partii",
+      "niezdecydowani": "Diagnoza odbioru przez wyborców środka",
+      "przeciwnicy": "Amunicja dla wyborców i mediów oponentów"
+    },
+    "rekomendacje_sztabowe": [
+      "Dyrektywa sztabowa 1",
+      "Dyrektywa sztabowa 2",
+      "Dyrektywa sztabowa 3",
+      "Dyrektywa sztabowa 4",
+      "Dyrektywa sztabowa 5"
+    ]
+  }
+}
+`
       : `Obejrzyj i przeanalizuj w całości to nagranie wideo. ${targetInfo}
 Zakres profilowania: ${scope === "pelny" ? "Pełny, wyczerpujący audyt sztabowy 360° (psychologia, mowa ciała FACS, nielogiczności, marketing polityczny, warsztat)" : "Tylko stan psychiczny i behawioralny"}.
 
@@ -269,7 +552,7 @@ Zwróć poprawny JSON o schemacie:
       "Dyrektywa sztabowa 5"
     ]
   }
-}`;
+}`);
 
     let mediaPart: any;
     if (uploadedFile) {
@@ -437,6 +720,7 @@ Zwróć poprawny JSON o schemacie:
       speaker_docelowy_tag: selectedSpeakerTag,
       rozpoznani_mowcy: speakers,
       format_materialu: formatMaterialuFinal,
+      relacja_polityka: politicianRelation,
       status_przetwarzania: "ZAKONCZONE",
       krok_postepu: isAudio ? "Analiza akustyczna głosu i profilowanie zakończone sukcesem." : "Analiza behawioralna i profilowanie zakończone sukcesem.",
       procent_postepu: 100,

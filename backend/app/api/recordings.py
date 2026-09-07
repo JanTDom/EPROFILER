@@ -52,6 +52,7 @@ class RecordingResponse(BaseModel):
     profile_id: Optional[str] = "profile_main"
     polityk_docelowy: Optional[str] = None
     rola_polityka: Optional[str] = "Badany polityk"
+    relacja_polityka: Optional[str] = "sojusznik" # "sojusznik" | "przeciwnik"
     speaker_docelowy_tag: Optional[str] = None
     rozpoznani_mowcy: Optional[List[dict]] = None
     psychometric_profile: Optional[PsychometricProfileResponse] = None
@@ -69,11 +70,13 @@ class CreateFromUrlRequest(BaseModel):
     profile_id: Optional[str] = "profile_main"
     polityk_docelowy: Optional[str] = None
     rola_polityka: Optional[str] = "Badany polityk"
+    relacja_polityka: Optional[str] = "sojusznik" # "sojusznik" | "przeciwnik"
 
 class SetTargetSpeakerRequest(BaseModel):
     speaker_tag: str
     imie_nazwisko: Optional[str] = None
     rola: Optional[str] = None
+    relacja: Optional[str] = None # "sojusznik" | "przeciwnik"
 
 @router.get("", response_model=List[RecordingResponse])
 async def list_recordings(
@@ -112,6 +115,7 @@ async def create_recording_from_url(payload: CreateFromUrlRequest, db: AsyncSess
         profile_id=payload.profile_id or "profile_main",
         polityk_docelowy=payload.polityk_docelowy.strip() if payload.polityk_docelowy else None,
         rola_polityka=payload.rola_polityka.strip() if payload.rola_polityka else "Badany polityk",
+        relacja_polityka=payload.relacja_polityka.strip() if payload.relacja_polityka else "sojusznik",
         status_przetwarzania="POBIERANIE",
         krok_postepu="Zadanie zakolejkowane do pobrania..."
     )
@@ -134,6 +138,7 @@ async def upload_recording_file(
     profile_id: Optional[str] = Form("profile_main"),
     polityk_docelowy: Optional[str] = Form(None),
     rola_polityka: Optional[str] = Form("Badany polityk"),
+    relacja_polityka: Optional[str] = Form("sojusznik"),
     db: AsyncSession = Depends(get_db)
 ):
     title = tytul.strip() if tytul else file.filename
@@ -154,6 +159,7 @@ async def upload_recording_file(
         profile_id=profile_id or "profile_main",
         polityk_docelowy=polityk_docelowy.strip() if polityk_docelowy else None,
         rola_polityka=rola_polityka.strip() if rola_polityka else "Badany polityk",
+        relacja_polityka=relacja_polityka.strip() if relacja_polityka else "sojusznik",
         status_przetwarzania="PRZETWARZANIE",
         krok_postepu="Zapisano plik. Uruchamianie przetwarzania..."
     )
@@ -177,7 +183,7 @@ async def set_target_speaker(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Pozwala zdefiniować lub zmienić cel profilowania (który mówca jest badanym politykiem).
+    Pozwala zdefiniować lub zmienić cel profilowania (który mówca jest badanym politykiem oraz relację).
     """
     stmt = select(Recording).options(selectinload(Recording.psychometric_profile)).where(Recording.id == recording_id)
     result = await db.execute(stmt)
@@ -190,6 +196,8 @@ async def set_target_speaker(
         rec.polityk_docelowy = payload.imie_nazwisko
     if payload.rola:
         rec.rola_polityka = payload.rola
+    if payload.relacja:
+        rec.relacja_polityka = payload.relacja
 
     # Zaktualizuj flagę is_target / jest_celem na liście rozpoznanych mówców
     if rec.rozpoznani_mowcy:

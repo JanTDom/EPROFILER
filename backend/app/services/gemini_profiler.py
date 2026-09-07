@@ -248,11 +248,12 @@ Zwróć poprawny JSON:
         self,
         audio_path: str,
         target_person: Optional[str] = None,
-        zakres_analizy: str = "pelny"
+        zakres_analizy: str = "pelny",
+        relacja_polityka: str = "sojusznik"
     ) -> Dict[str, Any]:
         """
         Multimodalna analiza nagrania audio przez Gemini 3.6 Flash.
-        Odsłuchuje rzeczywiste audio i generuje precyzyjny profil dla tego konkretnego nagrania.
+        Obsługuje tryb sojusznika (audyt i coaching) oraz przeciwnika (opposition research i wektory ataku).
         """
         import os, base64, subprocess
 
@@ -278,7 +279,82 @@ Zwróć poprawny JSON:
             else "KLUCZOWA ZASADA — IDENTYFIKACJA OSOBY DIAGNOZOWANEJ Z KONTEKSTU: Z powitań, zapowiedzi redakcyjnych („W studiu gościmy...”, „Naszym gościem jest...”), zwrotów formalnych („Panie Pośle/Ministrze/Premierze...”) oraz dynamiki pytań i odpowiedzi bezbłędnie wywnioskuj z kontekstu rozmowy, kim jest badany gość / polityk / ekspert (osoba diagnozowana). Oznacz go jako 'jest_celem': true."
         )
 
-        prompt = f"""Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu E-PROFILER.
+        if relacja_polityka == "przeciwnik":
+            prompt = f"""Jesteś bezwzględnym, analitycznym sztabowcem ds. walki politycznej, analitykiem 'opposition research' oraz trenerem debaty uderzeniowej systemu E-PROFILER.
+Odsłuchaj dołączone nagranie audio. {target_info}
+Osoba diagnozowana ({target_person or 'rozpoznany polityk'}) to PRZECIWNIK / OPONENT NASZEGO SZTABU (RELACJA: PRZECIWNIK).
+
+ZASADY AUDYTU PRZECIWNIKA (OPPOSITION RESEARCH & WEKTORY ATAKU):
+1. ZERO WSKAZAŃ SZTABOWYCH DLA NIEGO: Oponenta nie szkolimy, nie doradzamy mu jak ma mówić ani jak poprawić błędy. Nasz raport służy WYŁĄCZNIE naszemu sztabowi do jego politycznego obnażenia i zdemolowania przed wyborcami.
+2. PUNKTY WEJŚCIA ARGUMENTACYJNE (GDZIE GO ZAATAKOWAĆ MERYTORYCZNIE):
+   - Wskaż bezlitośnie jego wewnętrzne sprzeczności, fałszywe dane, puste obietnice bez pokrycia oraz sofizmaty.
+   - Wskaż uniki i tematy, od których ucieka — to są miejsca, w których nasz kandydat lub zaprzyjaźniony dziennikarz musi go bezwzględnie docisnąć.
+   - Do każdego słabego punktu przygotuj precyzyjną pułapkę lub pytanie kontrujące zamykające drogę ucieczki.
+3. PUNKTY WEJŚCIA OSOBOWOŚCIOWE I BEHAWIORALNE (GDZIE GO ZAATAKOWAĆ PSYCHOLOGICZNIE):
+   - Wskaż jego wyzwalacze emocjonalne (triggery): jakie tematy, gesty, uwagi czy prowokacje natychmiast wyprowadzają go z równowagi.
+   - Zidentyfikuj wycieki w mowie ciała i głosie zdradzające pęknięcie i lęk (drżenie głosu, przyspieszenie oddechu, nerwowy chichot, spięcie mięśni twarzy, uśmieszek pogardy AU14).
+   - Opracuj instrukcję destabilizacji psychologicznej: jak nasz kandydat w debacie 1-na-1 ma zagrać na jego kompleksach, dumie lub lękach, aby sprowokować u niego wybuch złości lub bezradność na wizji.
+4. AMUNICJA DO KONTRAKATU I SPOTÓW: Wytypuj najgorsze sformułowania oponenta ('samobóje'), które natychmiast należy pociąć na rolki i spoty kompromitujące.
+5. OCENA PODATNOŚCI NA ATAK (1-10): Gdzie 1 oznacza oponenta pancernego, a 10 oznacza oponenta skrajnie kruchego, histerycznego i podatnego na natychmiastową dekompozycję pod presją.
+6. FORMAT: Czysta polszczyzna, sentence case, odpowiedź wyłącznie poprawnym JSON-em.
+
+Zwróć poprawny JSON o schemacie:
+{{
+  "temat_rozmowy": "Zwięzły, 2-3 zdaniowy opis w sentence case, o czym dokładnie jest to nagranie i jakie główne wątki poruszono",
+  "rozpoznani_mowcy": [
+    {{
+      "speaker_tag": "SPEAKER_00",
+      "imie_nazwisko": "Imię i nazwisko",
+      "rola": "Dziennikarz / prowadzący | Badany polityk (oponent)",
+      "opis": "Zwięzły opis roli w rozmowie",
+      "jest_celem": true/false
+    }}
+  ],
+  "wybrany_speaker_tag": "SPEAKER_XX",
+  "wnioski": {{
+    "nastroje_i_emocje": "Diagnoza stanu nerwowego i emocji oponenta z cytatami",
+    "glowne_uniki_i_taktyka": "Jak oponent próbuje manipulować i uciekać od trudnych pytań",
+    "czule_punkty_stres": "Dokładne momenty paniki, załamania tempa mowy i drżenia głosu",
+    "spojnosc_mowy_ze_slowami": "Gdzie mowa ciała i ton głosu zdradzają, że oponent kłamie lub blefuje",
+    "sila_argumentacji": "Dekonstrukcja słabości merytorycznej: dlaczego jego argumenty runą przy konfrontacji",
+    "czy_odbiorcy_to_kupia": "Do jakich grup jego narracja trafia, a gdzie jest całkowicie niewiarygodny",
+    "pojedynek_z_adwersarzami": "Ocena odporności na presję: jak łatwo go zepchnąć do defensywy"
+  }},
+  "analiza_przeciwnika": {{
+    "glowna_podatnosc_oponenta": "2-3 zdaniowa esencja słabości oponenta w tym nagraniu",
+    "ocena_podatnosci_na_atak_1_10": 8,
+    "punkty_wejscia_argumentacyjne": [
+      {{
+        "tytul_wektora": "Nazwa luki logicznej lub uniku w sentence case",
+        "cytat_przeciwnika": "Dosłowny cytat oponenta z nagrania",
+        "diagnoza_slabosci": "Na czym polega fałsz, manipulacja lub brak logiki",
+        "rekomendowany_atak_lub_pulapka": "Gotowe pytanie-pułapka lub riposta uderzeniowa do zadania w debacie",
+        "zastosowanie_w_debacie": "Wskazówka taktyczna kiedy i jak odpalić ten atak"
+      }}
+    ],
+    "punkty_wejscia_osobowosciowe": [
+      {{
+        "trigger_emocjonalny": "Co natychmiast uderza w jego ego i wywołuje irytację",
+        "objaw_behawioralny": "Reakcja aparatu mowy i ciała (drżenie głosu, przełykanie śliny, unikanie wzroku)",
+        "mechanizm_psychologiczny": "Dlaczego ten temat łamie jego opanowanie (kompleks, niepewność, urażona pycha)",
+        "jak_wyprowadzic_z_rownowagi": "Instrukcja zachowania dla naszego kandydata jak go sprowokować do utraty kontroli"
+      }}
+    ],
+    "amunicja_uderzeniowa_do_spotow": [
+      {{
+        "cytat_samobojczy": "Dosłowny, kompromitujący cytat oponenta",
+        "kontekst_ataku": "Jak wykorzystać to w spotach i social mediach przeciwko niemu"
+      }}
+    ],
+    "rekomendacje_ofensywne_dla_naszego_sztabu": [
+      "Dyrektywa ofensywna 1 dla naszego sztabu przed debatą",
+      "Dyrektywa ofensywna 2",
+      "Dyrektywa ofensywna 3"
+    ]
+  }}
+}}"""
+        else:
+            prompt = f"""Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu E-PROFILER.
 Odsłuchaj dołączone nagranie audio. {target_info}
 ZAKRES PROFILOWANIA: {"PEŁNY AUDYT SZTABOWY (psychologia, mowa ciała, nielogiczności, marketing polityczny, warsztat)" if zakres_analizy == "pelny" else "TYLKO STAN PSYCHICZNY I BEHAWIORALNY"}.
 

@@ -65,6 +65,7 @@ class Recording(Base):
     # Rozpoznawanie i cel profilowania (gdy mówi kilku polityków)
     polityk_docelowy = Column(String(255), nullable=True) # Wskazany z góry polityk (np. "Donald Tusk")
     rola_polityka = Column(String(100), default="Badany polityk")
+    relacja_polityka = Column(String(50), default="sojusznik") # "sojusznik" (przyjaciel/nasz kandydat) | "przeciwnik" (wróg/oponent)
     speaker_docelowy_tag = Column(String(50), nullable=True) # Wykryty identyfikator mówcy (np. "SPEAKER_01")
     rozpoznani_mowcy = Column(JSON, default=list) # Lista wszystkich wykrytych osób w debacie/wywiadzie
     

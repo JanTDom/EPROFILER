@@ -1,4 +1,4 @@
-import { Recording, ProgressEventPayload, RecordingType } from "./types";
+import { Recording, ProgressEventPayload, RecordingType, PoliticianRelation } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zrkyyopftellntxxwgmo.supabase.co";
@@ -135,12 +135,14 @@ export async function createRecordingFromUrl(data: {
   zakres_analizy?: "pelny" | "behawioralny";
   polityk_docelowy?: string;
   rola_polityka?: string;
+  relacja_polityka?: PoliticianRelation;
   profile_id?: string;
   gemini_api_key?: string;
 }): Promise<Recording> {
   const profileId = data.profile_id || 'profile_main';
   const cleanUrl = sanitizeVideoUrl(data.url);
   data.url = cleanUrl;
+  const relacja = data.relacja_polityka || "sojusznik";
 
   // 1. Standalone Cloud Analysis (/api/analyze)
   // Działa w 100% w chmurze na Vercel + Gemini — bez potrzeby Antigravity czy lokalnego uvicorn!
@@ -161,6 +163,7 @@ export async function createRecordingFromUrl(data: {
         zakres_analizy: data.zakres_analizy ?? "pelny",
         polityk_docelowy: data.polityk_docelowy?.trim() || undefined,
         rola_polityka: data.rola_polityka?.trim() || "Badany polityk",
+        relacja_polityka: relacja,
       }),
     });
 
@@ -196,6 +199,7 @@ export async function createRecordingFromUrl(data: {
         zakres_analizy: data.zakres_analizy ?? "pelny",
         polityk_docelowy: data.polityk_docelowy?.trim() || undefined,
         rola_polityka: data.rola_polityka?.trim() || "Badany polityk",
+        relacja_polityka: relacja,
       }),
       signal: AbortSignal.timeout(3000),
     });
@@ -225,6 +229,7 @@ export async function createRecordingFromUrl(data: {
       zakres_analizy: data.zakres_analizy ?? "pelny",
       polityk_docelowy: data.polityk_docelowy?.trim() || null,
       rola_polityka: data.rola_polityka?.trim() || "Badany polityk",
+      relacja_polityka: relacja,
       rozpoznani_mowcy: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -252,18 +257,57 @@ export async function createRecordingFromUrl(data: {
 
 export async function setTargetSpeaker(
   recordingId: string,
-  payload: { speaker_tag: string; imie_nazwisko?: string; rola?: string }
+  payload: { speaker_tag: string; imie_nazwisko?: string; rola?: string; relacja?: PoliticianRelation }
 ): Promise<Recording> {
-  const res = await fetch(`${API_BASE}/api/recordings/${recordingId}/target-speaker`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || "Nie udało się zmienić badanego polityka.");
+  // 1. Bezpośredni zapis w bazie Supabase jeśli jest skonfigurowana
+  if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+    try {
+      const updateData: Record<string, any> = {
+        updated_at: new Date().toISOString(),
+      };
+      if (payload.speaker_tag) updateData.speaker_docelowy_tag = payload.speaker_tag;
+      if (payload.imie_nazwisko) updateData.polityk_docelowy = payload.imie_nazwisko;
+      if (payload.rola) updateData.rola_polityka = payload.rola;
+      if (payload.relacja) updateData.relacja_polityka = payload.relacja;
+
+      const sRes = await fetch(`${SUPABASE_URL}/rest/v1/recordings?id=eq.${recordingId}&select=*,psychometric_profile:psychometric_profiles(*),markers(*),segments(*)`, {
+        method: "PATCH",
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+          Prefer: "return=representation",
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      if (sRes.ok) {
+        const rows = await sRes.json();
+        if (rows && rows.length > 0) {
+          return normalizeRecording(rows[0]);
+        }
+      }
+    } catch (e) {
+      console.warn("Supabase direct updateTargetSpeaker fallback:", e);
+    }
   }
-  return res.json();
+
+  // 2. Fallback do backendu FastAPI
+  try {
+    const res = await fetch(`${API_BASE}/api/recordings/${recordingId}/target-speaker`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      return res.json();
+    }
+  } catch (err) {
+    console.warn("API_BASE setTargetSpeaker failed:", err);
+  }
+
+  // 3. Fallback: Pobierz aktualne nagranie z bazy
+  return await fetchRecording(recordingId);
 }
 
 export async function uploadRecordingFile(formData: FormData): Promise<Recording> {
@@ -318,6 +362,7 @@ export async function uploadRecordingFile(formData: FormData): Promise<Recording
       profile_id: (formData.get("profile_id") as string) || "profile_main",
       polityk_docelowy: (formData.get("polityk_docelowy") as string) || null,
       rola_polityka: (formData.get("rola_polityka") as string) || "Badany polityk",
+      relacja_polityka: (formData.get("relacja_polityka") as string) || "sojusznik",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

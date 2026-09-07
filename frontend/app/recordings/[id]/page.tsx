@@ -4,13 +4,14 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { fetchRecording, setTargetSpeaker, retryRecording, getRecordingPdfUrl } from "@/lib/api";
-import { Recording, DetectedSpeaker } from "@/lib/types";
+import { Recording, DetectedSpeaker, PoliticianRelation } from "@/lib/types";
 import { ProgressStepper } from "@/components/ProgressStepper";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { AudioPlayer } from "@/components/AudioPlayer";
 import { LegalNotice } from "@/components/LegalNotice";
 import { DeleteRecordingButton } from "@/components/DeleteRecordingButton";
 import { ForensicChat } from "@/components/ForensicChat";
+import { AdversaryAttackDossier } from "@/components/AdversaryAttackDossier";
 import {
   ArrowLeft,
   Clock,
@@ -51,6 +52,7 @@ export default function RecordingDetailPage() {
   const [showTechnicalDrawer, setShowTechnicalDrawer] = useState(false);
   const [isSwitchingSpeaker, setIsSwitchingSpeaker] = useState(false);
   const [customPoliticianName, setCustomPoliticianName] = useState("");
+  const [modalRelation, setModalRelation] = useState<PoliticianRelation>("sojusznik");
   const [switchingError, setSwitchingError] = useState<string | null>(null);
   const [seekToTimeSec, setSeekToTimeSec] = useState<number | null>(null);
 
@@ -70,6 +72,9 @@ export default function RecordingDetailPage() {
       if (data.polityk_docelowy) {
         setCustomPoliticianName(data.polityk_docelowy);
       }
+      if (data.relacja_polityka) {
+        setModalRelation(data.relacja_polityka);
+      }
     } catch (err: any) {
       setError(err.message || "Nie udało się załadować nagrania.");
     } finally {
@@ -81,13 +86,42 @@ export default function RecordingDetailPage() {
     if (id) loadData();
   }, [id]);
 
-  const handleSelectSpeaker = async (speakerTag: string, name?: string, role?: string) => {
+  const handleToggleRelation = async (newRelation: PoliticianRelation) => {
+    // 1. Natychmiastowa aktualizacja stanu lokalnego (brak opóźnień w interfejsie)
+    setRecording((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        relacja_polityka: newRelation,
+      };
+    });
+    setModalRelation(newRelation);
+
+    // 2. Trwały zapis w bazie
+    try {
+      const updated = await setTargetSpeaker(id, {
+        speaker_tag: targetTag,
+        imie_nazwisko: targetName,
+        rola: recording?.rola_polityka || "Badany polityk",
+        relacja: newRelation,
+      });
+      if (updated) {
+        setRecording(updated);
+      }
+    } catch (err: any) {
+      console.warn("Błąd zapisu nowej relacji na serwerze:", err);
+    }
+  };
+
+  const handleSelectSpeaker = async (speakerTag: string, name?: string, role?: string, relation?: PoliticianRelation) => {
     try {
       setSwitchingError(null);
+      const effectiveRelation = relation || modalRelation;
       const updated = await setTargetSpeaker(id, {
         speaker_tag: speakerTag,
         imie_nazwisko: name || customPoliticianName || undefined,
         rola: role || "Badany polityk",
+        relacja: effectiveRelation,
       });
       setRecording(updated);
       setIsSwitchingSpeaker(false);
@@ -142,6 +176,7 @@ export default function RecordingDetailPage() {
 
   const targetName = recording.polityk_docelowy || "Główny badany polityk";
   const targetTag = recording.speaker_docelowy_tag || "SPEAKER_01";
+  const isAdversary = recording.relacja_polityka === "przeciwnik";
 
   // Domyślna lista mówców jeśli nagranie jeszcze nie ma diaryzacji
   const speakersList: DetectedSpeaker[] = recording.rozpoznani_mowcy && recording.rozpoznani_mowcy.length > 0
@@ -188,11 +223,15 @@ export default function RecordingDetailPage() {
           <a
             href={getRecordingPdfUrl(recording.id)}
             download
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-950 bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-300 hover:to-blue-300 px-3.5 py-1.5 rounded-lg shadow-glow-cyan transition-all"
-            title="Pobierz elegancki raport audytu politycznego w formacie PDF"
+            className={`inline-flex items-center gap-1.5 text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all ${
+              isAdversary
+                ? "text-white bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 shadow-[0_0_20px_rgba(244,63,94,0.35)]"
+                : "text-slate-950 bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-300 hover:to-blue-300 shadow-glow-cyan"
+            }`}
+            title={isAdversary ? "Pobierz raport wywiadu ofensywnego i wektorów ataku w formacie PDF" : "Pobierz elegancki raport audytu politycznego w formacie PDF"}
           >
             <Download className="w-3.5 h-3.5" />
-            Pobierz raport PDF
+            {isAdversary ? "Raport oponenta PDF (Wektory ataku)" : "Raport sojusznika PDF (Audyt)"}
           </a>
 
           <button
@@ -213,14 +252,36 @@ export default function RecordingDetailPage() {
       </div>
 
       {/* Nagłówek materiału */}
-      <div className="relative bg-studio-card/90 border border-studio-border/80 p-6 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden before:absolute before:top-0 before:left-0 before:w-full before:h-1 before:bg-gradient-to-r before:from-cyan-500 before:via-blue-500 before:to-emerald-400">
+      <div className={`relative bg-studio-card/90 border p-6 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden before:absolute before:top-0 before:left-0 before:w-full before:h-1 ${
+        isAdversary
+          ? "border-rose-500/40 before:bg-gradient-to-r before:from-rose-600 before:via-red-500 before:to-amber-500 shadow-[0_0_30px_rgba(244,63,94,0.12)]"
+          : "border-studio-border/80 before:bg-gradient-to-r before:from-cyan-500 before:via-blue-500 before:to-emerald-400"
+      }`}>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-2">
-              <span className="text-[10px] font-mono font-bold tracking-wider px-2.5 py-0.5 bg-cyan-950/70 text-cyan-300 border border-cyan-500/40 rounded-full flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                Profiler studio
+              <span className={`text-[10px] font-mono font-bold tracking-wider px-2.5 py-0.5 rounded-full flex items-center gap-1.5 ${
+                isAdversary
+                  ? "bg-rose-950/80 text-rose-300 border border-rose-500/50 shadow-[0_0_10px_rgba(244,63,94,0.2)]"
+                  : "bg-cyan-950/70 text-cyan-300 border border-cyan-500/40"
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isAdversary ? "bg-rose-400 animate-pulse" : "bg-cyan-400 animate-pulse"}`} />
+                {isAdversary ? "OPPONENT INTELLIGENCE // WYWIAD OFENSYWNY" : "PROFILER STUDIO"}
               </span>
+
+              {/* Status Relacji */}
+              {isAdversary ? (
+                <span className="text-[10px] font-mono text-rose-300 bg-rose-950/90 px-2.5 py-0.5 border border-rose-500/60 rounded-full flex items-center gap-1 shadow-[0_0_10px_rgba(244,63,94,0.2)]">
+                  <Target className="w-3 h-3 text-rose-400" />
+                  STATUS: PRZECIWNIK (WEKTORY ATAKU)
+                </span>
+              ) : (
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 border border-emerald-500/40 rounded-full flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                  STATUS: SOJUSZNIK (AUDYT SZTABOWY)
+                </span>
+              )}
+
               <span className="text-[10px] font-mono px-2.5 py-0.5 bg-slate-800/80 text-slate-300 border border-studio-border rounded-full">
                 {recording.typ_nagrania}
               </span>
@@ -276,35 +337,84 @@ export default function RecordingDetailPage() {
       </div>
 
       {/* HUD BADANEGO POLITYKA & ROZPOZNAWANIE MÓWCÓW */}
-      <div className="bg-gradient-to-r from-cyan-950/40 via-studio-card/90 to-studio-card/90 border border-cyan-500/40 rounded-2xl p-5 shadow-xl">
+      <div className={`border rounded-2xl p-5 shadow-xl transition-all ${
+        isAdversary
+          ? "bg-gradient-to-r from-rose-950/40 via-studio-card/90 to-studio-card/90 border-rose-500/40 shadow-[0_0_25px_rgba(244,63,94,0.15)]"
+          : "bg-gradient-to-r from-cyan-950/40 via-studio-card/90 to-studio-card/90 border-cyan-500/40"
+      }`}>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-studio-border/70">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-glow-cyan">
-              <UserCheck className="w-5 h-5" />
+            <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${
+              isAdversary
+                ? "bg-rose-500/15 border-rose-500/50 text-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.3)]"
+                : "bg-cyan-500/10 border-cyan-500/40 text-cyan-400 shadow-glow-cyan"
+            }`}>
+              {isAdversary ? <Target className="w-5 h-5 text-rose-400 animate-pulse" /> : <UserCheck className="w-5 h-5" />}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 font-bold">
-                  AKTYWNY CEL PROFILOWANIA
+                <span className={`text-[10px] font-mono uppercase tracking-widest font-bold ${
+                  isAdversary ? "text-rose-400" : "text-cyan-400"
+                }`}>
+                  {isAdversary ? "NAMIERZONY OPONENT // WEKTORY ATAKU" : "AKTYWNY CEL PROFILOWANIA"}
                 </span>
-                <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
+                <span className={`w-2 h-2 rounded-full ${isAdversary ? "bg-rose-400 animate-ping" : "bg-cyan-400 animate-ping"}`} />
               </div>
               <h2 className="text-lg font-black text-white flex items-center gap-2">
                 <span>{targetName}</span>
-                <span className="text-xs font-mono font-normal text-cyan-300 bg-cyan-950/80 px-2 py-0.5 border border-cyan-500/30 rounded">
+                <span className={`text-xs font-mono font-normal px-2 py-0.5 border rounded ${
+                  isAdversary
+                    ? "text-rose-300 bg-rose-950/80 border-rose-500/40"
+                    : "text-cyan-300 bg-cyan-950/80 border-cyan-500/30"
+                }`}>
                   {targetTag}
                 </span>
               </h2>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* GŁÓWNY PRZEŁĄCZNIK RELACJI: SOJUSZNIK VS PRZECIWNIK */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center p-1 bg-[#060a14] border border-slate-700/90 rounded-xl shadow-xl">
+              <button
+                type="button"
+                onClick={() => handleToggleRelation("sojusznik")}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                  !isAdversary
+                    ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-1 ring-emerald-400/40"
+                    : "text-slate-400 hover:text-slate-200 border border-transparent"
+                }`}
+                title="Tryb audytu: wzmocnienie kandydata, wygaszanie błędów i dyrektywy sztabowe"
+              >
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>🛡️ Sojusznik (Audyt)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleToggleRelation("przeciwnik")}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                  isAdversary
+                    ? "bg-rose-500/30 text-rose-200 border border-rose-500/70 shadow-[0_0_20px_rgba(244,63,94,0.4)] ring-1 ring-rose-500/60"
+                    : "text-slate-400 hover:text-slate-200 border border-transparent"
+                }`}
+                title="Tryb wywiadu ofensywnego: słabości, destabilizacja psychiczna, pytania-pułapki i amunicja spotowa"
+              >
+                <Target className="w-4 h-4 text-rose-400" />
+                <span>🎯 Przeciwnik (Wektory ataku)</span>
+              </button>
+            </div>
+
             <button
               onClick={() => setIsSwitchingSpeaker(!isSwitchingSpeaker)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-studio-surface hover:bg-studio-surface/80 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 text-xs font-semibold rounded-lg transition-all"
+              className={`flex items-center gap-1.5 px-3 py-2 bg-studio-surface text-xs font-semibold rounded-lg transition-all border cursor-pointer ${
+                isAdversary
+                  ? "border-rose-500/40 hover:border-rose-400 text-rose-300 hover:bg-rose-950/30"
+                  : "border-cyan-500/40 hover:border-cyan-400 text-cyan-300 hover:bg-studio-surface/80"
+              }`}
             >
               <Users className="w-3.5 h-3.5" />
-              {isSwitchingSpeaker ? "Ukryj wybór mówców" : "Zmień badanego polityka"}
+              {isSwitchingSpeaker ? "Ukryj wybór mówców" : "Wskaż innego mówcę"}
             </button>
           </div>
         </div>
@@ -322,21 +432,25 @@ export default function RecordingDetailPage() {
               return (
                 <div
                   key={sp.speaker_tag}
-                  onClick={() => handleSelectSpeaker(sp.speaker_tag, sp.imie_nazwisko, sp.rola)}
+                  onClick={() => handleSelectSpeaker(sp.speaker_tag, sp.imie_nazwisko, sp.rola, modalRelation)}
                   className={`p-3 rounded-xl border cursor-pointer transition-all flex items-start justify-between gap-2 ${
                     isSelected
-                      ? "bg-cyan-950/40 border-cyan-400 ring-1 ring-cyan-400/40 shadow-glow-cyan"
+                      ? isAdversary
+                        ? "bg-rose-950/40 border-rose-400 ring-1 ring-rose-400/40 shadow-[0_0_15px_rgba(244,63,94,0.25)]"
+                        : "bg-cyan-950/40 border-cyan-400 ring-1 ring-cyan-400/40 shadow-glow-cyan"
                       : "bg-studio-surface/50 border-studio-border/60 hover:border-slate-600 hover:bg-studio-surface"
                   }`}
                 >
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-[10px] font-mono text-cyan-400 font-bold">
+                      <span className={`text-[10px] font-mono font-bold ${isAdversary ? "text-rose-400" : "text-cyan-400"}`}>
                         {sp.speaker_tag}
                       </span>
                       {isSelected && (
-                        <span className="text-[9px] bg-cyan-400 text-slate-950 px-1.5 py-0.2 rounded font-bold uppercase">
-                          Badany
+                        <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                          isAdversary ? "bg-rose-500 text-white" : "bg-cyan-400 text-slate-950"
+                        }`}>
+                          {isAdversary ? "Oponent" : "Badany"}
                         </span>
                       )}
                     </div>
@@ -349,7 +463,7 @@ export default function RecordingDetailPage() {
                   </div>
 
                   {isSelected ? (
-                    <CheckCircle2 className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+                    <CheckCircle2 className={`w-4 h-4 flex-shrink-0 mt-0.5 ${isAdversary ? "text-rose-400" : "text-cyan-400"}`} />
                   ) : (
                     <div className="w-4 h-4 rounded-full border border-slate-600 flex-shrink-0 mt-0.5" />
                   )}
@@ -358,28 +472,70 @@ export default function RecordingDetailPage() {
             })}
           </div>
 
-          {/* Formularz wpisania własnego nazwiska jeśli użytkownik chce doprecyzować */}
+          {/* Formularz wpisania własnego nazwiska oraz wyboru relacji */}
           {isSwitchingSpeaker && (
-            <div className="mt-4 p-3.5 bg-studio-surface/90 border border-cyan-500/30 rounded-xl space-y-2">
-              <label className="block text-xs font-semibold text-slate-200">
-                Wpisz imię i nazwisko osoby do profilowania:
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="np. Sławomir Mentzen, Donald Tusk, Krzysztof Bosak..."
-                  value={customPoliticianName}
-                  onChange={(e) => setCustomPoliticianName(e.target.value)}
-                  className="flex-1 px-3 py-1.5 text-xs bg-studio-card border border-studio-border rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-medium"
-                />
+            <div className="mt-4 p-4 bg-studio-surface/90 border border-slate-700/80 rounded-xl space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-200">
+                    Wpisz imię i nazwisko osoby do profilowania:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="np. Sławomir Mentzen, Donald Tusk, Krzysztof Bosak..."
+                    value={customPoliticianName}
+                    onChange={(e) => setCustomPoliticianName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs bg-studio-card border border-studio-border rounded-lg text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-medium"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-slate-200">
+                    Relacja ze sztabem (strategia analizy):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setModalRelation("sojusznik")}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all ${
+                        modalRelation === "sojusznik"
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/50 shadow-[0_0_10px_rgba(16,185,129,0.2)]"
+                          : "bg-slate-900 text-slate-400 border border-slate-700/60 hover:text-slate-200"
+                      }`}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Sojusznik (Audyt)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setModalRelation("przeciwnik")}
+                      className={`flex-1 py-2 px-3 rounded-lg text-xs font-mono font-medium flex items-center justify-center gap-1.5 transition-all ${
+                        modalRelation === "przeciwnik"
+                          ? "bg-rose-500/25 text-rose-200 border border-rose-500/60 shadow-[0_0_12px_rgba(244,63,94,0.3)]"
+                          : "bg-slate-900 text-slate-400 border border-slate-700/60 hover:text-slate-200"
+                      }`}
+                    >
+                      <Target className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Przeciwnik (Atak)</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
                 <button
                   type="button"
-                  onClick={() => handleSelectSpeaker(targetTag, customPoliticianName)}
-                  className="px-4 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold rounded-lg transition-colors"
+                  onClick={() => handleSelectSpeaker(targetTag, customPoliticianName, undefined, modalRelation)}
+                  className={`px-5 py-2 text-xs font-bold font-mono uppercase tracking-wider rounded-lg transition-all ${
+                    modalRelation === "przeciwnik"
+                      ? "bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white shadow-[0_0_15px_rgba(244,63,94,0.3)]"
+                      : "bg-cyan-500 hover:bg-cyan-400 text-slate-950"
+                  }`}
                 >
-                  Zapisz cel
+                  Zapisz i przelicz profil
                 </button>
               </div>
+
               {switchingError && (
                 <div className="text-xs text-red-400">{switchingError}</div>
               )}
@@ -476,9 +632,58 @@ export default function RecordingDetailPage() {
             />
           )}
 
-          {/* BILANS WIZERUNKOWY I MARKETING POLITYCZNY */}
+          {/* DOSSIER WEKTORÓW ATAKU NA PRZECIWNIKA (OPONENT) LUB AUDYT SZTABOWY (SOJUSZNIK) */}
           {recording.psychometric_profile && (
-            <div className="bg-studio-card/90 border border-studio-border/80 p-6 rounded-2xl shadow-2xl backdrop-blur-xl space-y-6">
+            <div className="space-y-4">
+              {/* WYRAŹNE ZAKŁADKI WYBORU TRYBU RAPORTU WIDOCZNE W SAMYM RAPORCIE */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-[#0b101e]/95 border border-slate-700/80 rounded-2xl shadow-xl backdrop-blur-xl">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xs font-mono text-slate-400 uppercase font-bold tracking-wider">
+                    Sekcja analityczna dla:
+                  </span>
+                  <span className="text-xs font-mono font-bold text-cyan-300 bg-cyan-950/60 px-2.5 py-1 rounded border border-cyan-500/30">
+                    {targetName} ({targetTag})
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 p-1 bg-[#06080f] border border-slate-800 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleRelation("sojusznik")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      !isAdversary
+                        ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
+                        : "text-slate-400 hover:text-slate-200 border border-transparent"
+                    }`}
+                  >
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    <span>🛡️ Audyt sztabowy (Sojusznik)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleToggleRelation("przeciwnik")}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer ${
+                      isAdversary
+                        ? "bg-rose-500/30 text-rose-200 border border-rose-500/60 shadow-[0_0_15px_rgba(244,63,94,0.3)]"
+                        : "text-slate-400 hover:text-slate-200 border border-transparent"
+                    }`}
+                  >
+                    <Target className="w-4 h-4 text-rose-400" />
+                    <span>🎯 Dossier ataku (Przeciwnik)</span>
+                  </button>
+                </div>
+              </div>
+
+              {isAdversary ? (
+                <AdversaryAttackDossier
+                  recording={recording}
+                  targetName={targetName}
+                  onSeek={handleSeekFromChat}
+                  onToggleRelation={handleToggleRelation}
+                />
+              ) : (
+                <div className="bg-studio-card/90 border border-studio-border/80 p-6 rounded-2xl shadow-2xl backdrop-blur-xl space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-studio-border/70">
                 <div className="flex items-center gap-2.5">
                   <Award className="w-5 h-5 text-amber-400 flex-shrink-0" />
@@ -491,8 +696,26 @@ export default function RecordingDetailPage() {
                     </p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="flex items-center p-1 bg-[#060a14] border border-slate-700/80 rounded-xl shadow-lg">
+                    <button
+                      type="button"
+                      className="px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 bg-emerald-500/25 text-emerald-300 border border-emerald-500/50 shadow-sm"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Sojusznik (Audyt)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleRelation("przeciwnik")}
+                      className="px-3 py-1.5 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 text-slate-400 hover:text-rose-300 hover:bg-rose-950/40 transition-all cursor-pointer"
+                      title="Przełącz ten raport na analizę przeciwnika (Opposition Research) i wektory ataku"
+                    >
+                      <Target className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Przełącz na: Przeciwnik</span>
+                    </button>
+                  </div>
+                  <span className="text-xs font-mono font-bold px-3 py-1.5 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/40">
                     Badany: {targetName}
                   </span>
                 </div>
@@ -944,6 +1167,8 @@ export default function RecordingDetailPage() {
                   </div>
                 );
               })()}
+            </div>
+            )}
             </div>
           )}
 

@@ -162,6 +162,7 @@ async def run_pipeline_step_by_step(recording_id: str) -> None:
         # Pobierz cel profilowania
         target_person = None
         zakres = "pelny"
+        relacja = "sojusznik"
         async with AsyncSessionLocal() as session:
             stmt = select(Recording).where(Recording.id == recording_id)
             res = await session.execute(stmt)
@@ -169,13 +170,15 @@ async def run_pipeline_step_by_step(recording_id: str) -> None:
             if r_curr:
                 target_person = r_curr.polityk_docelowy
                 zakres = r_curr.zakres_analizy or "pelny"
+                relacja = getattr(r_curr, "relacja_polityka", "sojusznik") or "sojusznik"
 
         # Uruchom profilowanie multimodalne
-        logger.info(f"Uruchamianie Gemini multimodal profiler dla {recording_id}, cel: {target_person}")
+        logger.info(f"Uruchamianie Gemini multimodal profiler dla {recording_id}, cel: {target_person}, relacja: {relacja}")
         analysis = await gemini_profiler.profile_audio_multimodal(
             audio_path=audio_path,
             target_person=target_person,
-            zakres_analizy=zakres
+            zakres_analizy=zakres,
+            relacja_polityka=relacja
         )
         logger.info(f"Gemini zwrócił wynik dla {recording_id}")
 
@@ -204,8 +207,20 @@ async def run_pipeline_step_by_step(recording_id: str) -> None:
 
                         wnioski = analysis.get("wnioski", {})
                         mkt = analysis.get("marketing_polityczny", {})
-                        plusy = mkt.get("glowne_plusy", []) or ([wnioski.get("sila_argumentacji")] if wnioski.get("sila_argumentacji") else [])
-                        minusy = mkt.get("popelnione_bledy_i_minusy", []) or ([wnioski.get("czule_punkty_stres")] if wnioski.get("czule_punkty_stres") else [])
+                        adv = analysis.get("analiza_przeciwnika", {})
+
+                        if adv and relacja == "przeciwnik":
+                            plusy = []
+                            minusy = [
+                                p.get("tytul_wektora", "Punkt wejścia") + ": " + p.get("diagnoza_slabosci", "")
+                                for p in adv.get("punkty_wejscia_argumentacyjne", [])
+                            ] + [
+                                "Wyzwalacz: " + p.get("trigger_emocjonalny", "") + " -> " + p.get("objaw_behawioralny", "")
+                                for p in adv.get("punkty_wejscia_osobowosciowe", [])
+                            ]
+                        else:
+                            plusy = mkt.get("glowne_plusy", []) or ([wnioski.get("sila_argumentacji")] if wnioski.get("sila_argumentacji") else [])
+                            minusy = mkt.get("popelnione_bledy_i_minusy", []) or ([wnioski.get("czule_punkty_stres")] if wnioski.get("czule_punkty_stres") else [])
 
                         p_stmt = select(PsychometricProfile).where(PsychometricProfile.recording_id == recording_id)
                         p_res = await session.execute(p_stmt)
@@ -214,7 +229,7 @@ async def run_pipeline_step_by_step(recording_id: str) -> None:
                             prof = PsychometricProfile(
                                 recording_id=recording_id,
                                 nastroj_glowny_prosty=wnioski.get("nastroje_i_emocje", "Opanowany i skupiony"),
-                                styl_komunikacji_prosty=wnioski.get("glowne_uniki_i_taktyka", "Rzeczowy i bezpośredni"),
+                                styl_komunikacji_prosty=adv.get("glowna_podatnosc_oponenta") or wnioski.get("glowne_uniki_i_taktyka", "Rzeczowy i bezpośredni"),
                                 czule_punkty_i_leki=minusy,
                                 mocne_strony=plusy,
                                 glowne_uniki_i_taktyka=wnioski.get("glowne_uniki_i_taktyka"),
@@ -227,7 +242,7 @@ async def run_pipeline_step_by_step(recording_id: str) -> None:
                             session.add(prof)
                         else:
                             prof.nastroj_glowny_prosty = wnioski.get("nastroje_i_emocje", prof.nastroj_glowny_prosty)
-                            prof.styl_komunikacji_prosty = wnioski.get("glowne_uniki_i_taktyka", prof.styl_komunikacji_prosty)
+                            prof.styl_komunikacji_prosty = adv.get("glowna_podatnosc_oponenta") or wnioski.get("glowne_uniki_i_taktyka", prof.styl_komunikacji_prosty)
                             if minusy:
                                 prof.czule_punkty_i_leki = minusy
                             if plusy:

@@ -81,16 +81,43 @@ export async function POST(
     }
 
     // 3. Przygotuj kontekst audytu do promptu systemowego
-    const targetPolitician = recordingData.polityk_docelowy || "Badany polityk";
+    const targetPolitician = recordingData.polityk_docelowy || "Badana osoba";
     const recordingTitle = recordingData.tytul || "Wystąpienie publiczne";
     const speakers = recordingData.rozpoznani_mowcy || [];
-    const marketingData = profileData?.dane_marketingowe || {};
     const rawAiNotes = profileData?.surowe_wnioski_ai || {};
+    const marketingData = profileData?.dane_marketingowe || rawAiNotes.marketing_polityczny || {};
+    const adversaryData = rawAiNotes.analiza_przeciwnika || {};
+    const isAdversary = recordingData.relacja_polityka === "przeciwnik" || Boolean(rawAiNotes.analiza_przeciwnika);
 
-    const forensicContext = `
+    const forensicContext = isAdversary
+      ? `
+DANE ZIDENTYFIKOWANEGO OPONENTA:
+- Tytuł nagrania: "${recordingTitle}"
+- Oponent (cel ataku): ${targetPolitician} (Rola: ${recordingData.rola_polityka || "Oponent polityczny / dziennikarz / działacz"})
+- Relacja ze sztabem: PRZECIWNIK (TRYB WYWIADU OFENSYWNEGO & WEKTORÓW ATAKU)
+- Czas trwania: ${recordingData.czas_trwania_sek || 0} sekund
+- Rozpoznani rozmówcy: ${JSON.stringify(speakers, null, 2)}
+
+OPPOSITION RESEARCH — DOSSIER SŁABOŚCI I WEKTORÓW ATAKU:
+- Główna podatność oponenta: ${adversaryData.glowna_podatnosc_oponenta || profileData?.nastroj_glowny_prosty || "Brak"}
+- Ocena podatności na atak (1-10): ${adversaryData.ocena_podatnosci_na_atak_1_10 || 8}/10
+- Punkty wejścia osobowościowe i słabości psychiczne (TRIGERY ORAZ JAK GO WYPROWADZIĆ Z RÓWNOWAGI): 
+${JSON.stringify(adversaryData.punkty_wejscia_osobowosciowe || [], null, 2)}
+- Punkty wejścia argumentacyjne (LUKI, MANIPULACJE I GOTOWE PYTANIA-PUŁAPKI):
+${JSON.stringify(adversaryData.punkty_wejscia_argumentacyjne || [], null, 2)}
+- Amunicja uderzeniowa do spotów ('samobóje'):
+${JSON.stringify(adversaryData.amunicja_uderzeniowa_do_spotow || [], null, 2)}
+- Strategiczne dyrektywy ofensywne dla naszego sztabu:
+${JSON.stringify(adversaryData.rekomendacje_ofensywne_dla_naszego_sztabu || [], null, 2)}
+
+SUROWE NOTATKI SILNIKA BEHAWIORALNEGO:
+${JSON.stringify(rawAiNotes, null, 2)}
+`
+      : `
 DANE ZIDENTYFIKOWANEGO NAGRANIA:
 - Tytuł: "${recordingTitle}"
 - Osoba diagnozowana (cel audytu): ${targetPolitician} (Rola: ${recordingData.rola_polityka || "Polityk"})
+- Relacja ze sztabem: SOJUSZNIK (AUDYT SZTABOWY)
 - Czas trwania: ${recordingData.czas_trwania_sek || 0} sekund
 - Rozpoznani rozmówcy: ${JSON.stringify(speakers, null, 2)}
 
@@ -112,7 +139,27 @@ SUROWE NOTATKI SILNIKA PSYCHOMETRYCZNEGO:
 ${JSON.stringify(rawAiNotes, null, 2)}
 `;
 
-    const systemInstruction = `Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, szefem sztabu wyborczego oraz ekspertem psychologii komunikacji systemu E-PROFILER.
+    const systemInstruction = isAdversary
+      ? `Jesteś ofensywnym doradcą sztabowym ds. walki politycznej, rzecznikiem i głównym strategiem sztabu wyborczego w systemie E-PROFILER.
+Badana osoba (${targetPolitician}) została zdefiniowana jako PRZECIWNIK / OPONENT (może to być rywalizujący polityk, nieprzychylny lub agresywny dziennikarz prowadzący rozmowę, albo wrogi publicysta/działacz).
+
+TWOJA MISJA:
+Pomagasz naszemu kandydatowi, sztabowcom i rozmówcom w mediach ZNEUTRALIZOWAĆ oponenta, zdemaskować jego fałsz i słabości psychiczne oraz WYGRAĆ starcie medialne.
+
+ZASADY PRACY I FORMATOWANIA:
+1. ZNACZNIKI CZASU (BARDZO WAŻNE): Za każdym razem gdy wskazujesz błąd, wyciek w głosie/mimice, manipulację czy cytat oponenta, podawaj dokładny znacznik [MM:SS] (np. [02:14]), aby sztabowiec mógł to natychmiast zobaczyć i wyciąć.
+2. DESTABILIZACJA I EMOCJE (JAK GO WYPROWADZIĆ Z RÓWNOWAGI):
+   - Jeśli użytkownik pyta "Jak go wyprowadzić z równowagi?", "Kiedy puszczają mu nerwy?" lub "W co uderzyć?" — wskaż jego kluczowe kompleksy, triggery, wycieki mimiczne/głosowe i podaj bezwzględną instrukcję zachowania w studiu, która doprowadzi go do dekompozycji na wizji.
+3. WEKTORY ARGUMENTACYJNE:
+   - Formułuj bezwzględnie precyzyjne pytania-pułapki (trapy retoryczne), które nie dają oponentowi drogi ucieczki w ogólniki.
+4. AMUNICJA DO SPOTÓW:
+   - Gdy padnie pytanie o amunicję spotową lub social media — wskaż dokładne cytaty ("samobóje") i opisz scenariusz 15-sekundowego klipu uderzeniowego.
+5. Czysta polszczyzna, twardy sztabowy styl, zero laurek dla oponenta, czytelne formatowanie punktowe.
+
+KONTEKST BADAWCZY NAGRANIA:
+${forensicContext}
+`
+      : `Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, szefem sztabu wyborczego oraz ekspertem psychologii komunikacji systemu E-PROFILER.
 Rozmawiasz ze sztabowcem, strategiem kampanii lub dziennikarzem śledczym analizującym to konkretne nagranie.
 
 TWOJE ZASADY PRACY I FORMATOWANIA:

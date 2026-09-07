@@ -68,11 +68,13 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
 
   const rawAi = profile?.surowe_wnioski_ai || {};
   const mkt = rawAi.marketing_polityczny || {};
+  const adv = rawAi.analiza_przeciwnika || {};
+  const isAdversary = recording.relacja_polityka === "przeciwnik" || Boolean(rawAi.analiza_przeciwnika);
   const wnioski = rawAi.wnioski || {};
   const psychometrics = rawAi.profil_psychometryczny_wielka_piatka || {};
 
   const targetName = recording.polityk_docelowy || "Główny badany polityk";
-  const roleName = recording.rola_polityka || "Badany gość";
+  const roleName = recording.rola_polityka || (isAdversary ? "Badany oponent" : "Badany gość");
   const durationMin = recording.czas_trwania_sek
     ? Math.round(recording.czas_trwania_sek / 60)
     : null;
@@ -143,24 +145,34 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     color: rgb(0.06, 0.09, 0.16),
   });
 
-  page.drawText("E-PROFILER • FORENSIC BEHAVIORAL & SPEECH INTELLIGENCE", {
-    x: margin + 14,
-    y: y - 20,
-    size: 7.5,
-    font: fontB,
-    color: rgb(0.22, 0.74, 0.97),
-  });
-
-  page.drawText("Raport audytu wystąpienia i marketingu politycznego", {
-    x: margin + 14,
-    y: y - 38,
-    size: 13,
-    font: fontB,
-    color: rgb(1, 1, 1),
-  });
+  page.drawText(
+    isAdversary 
+      ? "E-PROFILER • OPPOSITION RESEARCH & TACTICAL INTELLIGENCE" 
+      : "E-PROFILER • FORENSIC BEHAVIORAL & SPEECH INTELLIGENCE", 
+    {
+      x: margin + 14,
+      y: y - 20,
+      size: 7.5,
+      font: fontB,
+      color: isAdversary ? rgb(0.96, 0.45, 0.55) : rgb(0.22, 0.74, 0.97),
+    }
+  );
 
   page.drawText(
-    `Osoba diagnozowana: ${targetName} • Rola: ${roleName}${durationMin ? ` • Czas: ${durationMin} min` : ""} • Format: ${isAudio ? "Ścieżka dźwiękowa (audio)" : "Materiał wideo (FACS)"}`,
+    isAdversary
+      ? "Raport wywiadu sztabowego: Punkty wejścia i wektory ataku na oponenta"
+      : "Raport audytu wystąpienia i marketingu politycznego", 
+    {
+      x: margin + 14,
+      y: y - 38,
+      size: 12.5,
+      font: fontB,
+      color: rgb(1, 1, 1),
+    }
+  );
+
+  page.drawText(
+    `Cel: ${targetName} • Rola: ${roleName}${durationMin ? ` • Czas: ${durationMin} min` : ""} • Relacja: ${isAdversary ? "PRZECIWNIK" : "SOJUSZNIK"} • Format: ${isAudio ? "Ścieżka dźwiękowa (audio)" : "Wideo (FACS)"}`,
     {
       x: margin + 14,
       y: y - 56,
@@ -183,10 +195,16 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
 
   y -= headerHeight + 14;
 
-  // 2. KARTA WERDYKTU I OCENY SZTABOWEJ
-  const score = typeof mkt.ocena_punktowa_1_10 === "number" ? mkt.ocena_punktowa_1_10 : 6;
-  const verdict = mkt.werdykt || "Występ poprawny z zastrzeżeniami";
-  const justification = mkt.uzasadnienie_werdyktu || "";
+  // 2. KARTA WERDYKTU I OCENY SZTABOWEJ / PODATNOŚCI NA ATAK
+  const advScore = typeof adv.ocena_podatnosci_na_atak_1_10 === "number" ? adv.ocena_podatnosci_na_atak_1_10 : 8;
+  const score = isAdversary ? advScore : (typeof mkt.ocena_punktowa_1_10 === "number" ? mkt.ocena_punktowa_1_10 : 6);
+  const verdict = isAdversary
+    ? (score >= 8 ? "Skrajnie wysoka podatność na sprowokowanie i dekompozycję" : score >= 5 ? "Umiarkowana podatność z wyraźnymi pęknięciami" : "Dyscyplina wypowiedzi (wymaga precyzyjnych pułapek)")
+    : (mkt.werdykt || "Występ poprawny z zastrzeżeniami");
+  const scoreLabel = isAdversary ? "PODATNOŚĆ NA ATAK" : "OCENA SZTABOWA";
+  const justification = isAdversary
+    ? (adv.glowna_podatnosc_oponenta || profile?.podsumowanie_ai_proste || "Oponent wykazuje podwyższoną reaktywność emocjonalną przy dociskaniu do konkretnych danych.")
+    : (mkt.uzasadnienie_werdyktu || "");
   const justLines = wrapText(justification, fontR, 8.5, contentWidth - 140);
   const verdictHeight = Math.max(72, 38 + justLines.length * 11.5);
 
@@ -201,12 +219,9 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
   });
 
   // Lewy akcent werdyktu
-  const scoreColor =
-    score >= 7
-      ? rgb(0.06, 0.58, 0.35)
-      : score >= 5
-      ? rgb(0.85, 0.45, 0.08)
-      : rgb(0.82, 0.12, 0.23);
+  const scoreColor = isAdversary
+    ? (score >= 8 ? rgb(0.82, 0.12, 0.23) : score >= 5 ? rgb(0.85, 0.45, 0.08) : rgb(0.12, 0.45, 0.7))
+    : (score >= 7 ? rgb(0.06, 0.58, 0.35) : score >= 5 ? rgb(0.85, 0.45, 0.08) : rgb(0.82, 0.12, 0.23));
 
   page.drawRectangle({
     x: margin,
@@ -225,7 +240,7 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     color: rgb(0.06, 0.09, 0.16),
   });
 
-  page.drawText("OCENA SZTABOWA", {
+  page.drawText(scoreLabel, {
     x: margin + 18,
     y: y - 52,
     size: 6.5,
@@ -586,10 +601,108 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
     }
   }
 
-  // 4. MOCNE STRONY I ATUTY WIZERUNKOWE (Plusy)
-  const plusy = mkt.glowne_plusy || [];
-  if (plusy.length > 0) {
-    renderSectionHeading("Mocne strony i atuty wizerunkowe", 90, rgb(0.06, 0.55, 0.32));
+  if (isAdversary) {
+    // 4. SŁABOŚCI PSYCHICZNE I INSTRUKCJA DESTABILIZACJI
+    const punktyOsobowosciowe = adv.punkty_wejscia_osobowosciowe || [];
+    if (punktyOsobowosciowe.length > 0) {
+      renderSectionHeading("Słabości psychiczne i instrukcja destabilizacji w studiu", 90, rgb(0.82, 0.12, 0.23));
+
+      punktyOsobowosciowe.forEach((item: any, idx: number) => {
+        renderAtomicCard({
+          badgeLabel: `TRIGGER #${idx + 1}`,
+          badgeBg: rgb(0.97, 0.88, 0.89),
+          badgeFg: rgb(0.72, 0.1, 0.18),
+          accentColor: rgb(0.82, 0.12, 0.23),
+          bgCard: rgb(0.99, 0.97, 0.97),
+          borderCard: rgb(0.95, 0.86, 0.88),
+          title: item.trigger_emocjonalny || `Słabość psychiczna #${idx + 1}`,
+          quote: item.objaw_behawioralny ? `Wyciek w aparacie mowy/mimice: ${item.objaw_behawioralny}` : null,
+          description: item.mechanizm_psychologiczny ? `Podłoże kompleksu / pychy: ${item.mechanizm_psychologiczny}` : null,
+          extraBox: item.jak_wyprowadzic_z_rownowagi
+            ? {
+                label: "INSTRUKCJA DESTABILIZACJI (JAK WYPROWADZIĆ Z RÓWNOWAGI)",
+                text: item.jak_wyprowadzic_z_rownowagi,
+                bgColor: rgb(0.98, 0.9, 0.92),
+                textColor: rgb(0.72, 0.1, 0.18),
+                accentBar: rgb(0.82, 0.12, 0.23),
+              }
+            : null,
+        });
+      });
+    }
+
+    // 5. PUNKTY WEJŚCIA ARGUMENTACYJNEGO I PYTANIA-PUŁAPKI
+    const punktyArgumentacyjne = adv.punkty_wejscia_argumentacyjne || [];
+    if (punktyArgumentacyjne.length > 0) {
+      renderSectionHeading("Wektory ataku argumentacyjnego i pytania-pułapki", 90, rgb(0.85, 0.45, 0.08));
+
+      punktyArgumentacyjne.forEach((item: any, idx: number) => {
+        renderAtomicCard({
+          badgeLabel: `WEKTOR #${idx + 1}`,
+          badgeBg: rgb(0.98, 0.91, 0.84),
+          badgeFg: rgb(0.75, 0.38, 0.06),
+          accentColor: rgb(0.85, 0.45, 0.08),
+          bgCard: rgb(0.99, 0.98, 0.96),
+          borderCard: rgb(0.95, 0.89, 0.83),
+          title: item.tytul_wektora || `Luka argumentacyjna #${idx + 1}`,
+          quote: item.cytat_przeciwnika,
+          description: `Diagnoza słabości: ${item.diagnoza_slabosci}${item.zastosowanie_w_debacie ? " • Wskazówka: " + item.zastosowanie_w_debacie : ""}`,
+          extraBox: item.rekomendowany_atak_lub_pulapka
+            ? {
+                label: "GOTOWE PYTANIE-PUŁAPKA / RIPOSTA UDERZENIOWA",
+                text: item.rekomendowany_atak_lub_pulapka,
+                bgColor: rgb(0.93, 0.96, 0.98),
+                textColor: rgb(0.08, 0.35, 0.58),
+                accentBar: rgb(0.12, 0.48, 0.75),
+              }
+            : null,
+        });
+      });
+    }
+
+    // 6. AMUNICJA UDERZENIOWA DO SPOTÓW I MEDIÓW
+    const amunicjaSpoty = adv.amunicja_uderzeniowa_do_spotow || [];
+    if (amunicjaSpoty.length > 0) {
+      renderSectionHeading("Amunicja uderzeniowa do spotów i kreacji social media", 90, rgb(0.72, 0.1, 0.15));
+
+      amunicjaSpoty.forEach((item: any, idx: number) => {
+        renderAtomicCard({
+          badgeLabel: `SAMOBÓJ #${idx + 1}`,
+          badgeBg: rgb(0.97, 0.86, 0.88),
+          badgeFg: rgb(0.68, 0.08, 0.14),
+          accentColor: rgb(0.72, 0.1, 0.15),
+          bgCard: rgb(0.99, 0.97, 0.97),
+          borderCard: rgb(0.94, 0.84, 0.86),
+          title: "Kompromitujący cytat oponenta do wycięcia",
+          quote: item.cytat_samobojczy,
+          description: item.kontekst_ataku ? `Kontekst uderzenia sztabu: ${item.kontekst_ataku}` : null,
+        });
+      });
+    }
+
+    // 7. STRATEGICZNE DYREKTYWY OFENSYWNE DLA NASZEGO SZTABU
+    const rekomendacjeOfensywne = adv.rekomendacje_ofensywne_dla_naszego_sztabu || [];
+    if (rekomendacjeOfensywne.length > 0) {
+      renderSectionHeading("Strategiczne dyrektywy ofensywne dla naszego sztabu", 90, rgb(0.35, 0.25, 0.7));
+
+      rekomendacjeOfensywne.forEach((rek: string, idx: number) => {
+        renderAtomicCard({
+          badgeLabel: `DYREKTYWA #${idx + 1}`,
+          badgeBg: rgb(0.92, 0.9, 0.98),
+          badgeFg: rgb(0.32, 0.2, 0.65),
+          accentColor: rgb(0.35, 0.25, 0.7),
+          bgCard: rgb(0.98, 0.98, 1.0),
+          borderCard: rgb(0.9, 0.88, 0.96),
+          title: `Zasada taktyczna #${idx + 1}`,
+          description: rek,
+        });
+      });
+    }
+  } else {
+    // 4. MOCNE STRONY I ATUTY WIZERUNKOWE (Plusy)
+    const plusy = mkt.glowne_plusy || [];
+    if (plusy.length > 0) {
+      renderSectionHeading("Mocne strony i atuty wizerunkowe", 90, rgb(0.06, 0.55, 0.32));
 
     plusy.forEach((plus: any, idx: number) => {
       renderAtomicCard({
@@ -820,6 +933,7 @@ export async function generateRecordingPdf(recording: any): Promise<Uint8Array> 
         description: rek,
       });
     });
+  }
   }
 
   // 12. NOTA METODOLOGICZNA I KLAUZULA PRAWNA

@@ -213,6 +213,7 @@ export default async function DashboardPage() {
               <thead className="bg-slate-900/90 text-[11px] font-mono font-semibold text-slate-400 uppercase tracking-wider">
                 <tr>
                   <th className="px-5 py-3.5">Tytuł materiału</th>
+                  <th className="px-4 py-3.5">Relacja / Cel</th>
                   <th className="px-4 py-3.5">Format</th>
                   <th className="px-4 py-3.5">Zakres oceny</th>
                   <th className="px-4 py-3.5">Biometria</th>
@@ -238,6 +239,34 @@ export default async function DashboardPage() {
                         <span className="text-[11px] font-mono text-slate-500 block truncate mt-0.5">
                           {rec.zrodlo_url}
                         </span>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-4">
+                      {rec.relacja_polityka === "przeciwnik" ? (
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950/80 text-rose-300 border border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.2)]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
+                            🎯 PRZECIWNIK
+                          </span>
+                          {rec.polityk_docelowy && (
+                            <span className="text-[10px] font-mono text-rose-400/80 block truncate mt-0.5 font-semibold">
+                              {rec.polityk_docelowy}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                            🛡️ SOJUSZNIK
+                          </span>
+                          {rec.polityk_docelowy && (
+                            <span className="text-[10px] font-mono text-emerald-400/80 block truncate mt-0.5 font-semibold">
+                              {rec.polityk_docelowy}
+                            </span>
+                          )}
+                        </div>
                       )}
                     </td>
 

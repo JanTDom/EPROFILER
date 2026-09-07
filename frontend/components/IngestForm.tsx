@@ -24,10 +24,11 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
-  Mic
+  Mic,
+  Target
 } from "lucide-react";
 import { createRecordingFromUrl, uploadRecordingFile, sanitizeVideoUrl } from "@/lib/api";
-import { RecordingType } from "@/lib/types";
+import { RecordingType, PoliticianRelation } from "@/lib/types";
 import { getClientProfile, getClientCustomGeminiKey } from "@/lib/profile";
 import { LegalNotice } from "./LegalNotice";
 
@@ -46,8 +47,12 @@ export const IngestForm: React.FC = () => {
       const sp = new URLSearchParams(window.location.search);
       const urlParam = sp.get("url");
       const polParam = sp.get("polityk");
+      const relParam = sp.get("relacja");
       if (urlParam) setUrl(urlParam);
       if (polParam) setTargetPolitician(polParam);
+      if (relParam === "przeciwnik" || relParam === "sojusznik") {
+        setPoliticianRelation(relParam as PoliticianRelation);
+      }
     }
   }, []);
 
@@ -57,6 +62,7 @@ export const IngestForm: React.FC = () => {
   const [title, setTitle] = useState("");
   const [targetPolitician, setTargetPolitician] = useState("");
   const [politicianRole, setPoliticianRole] = useState("Badany polityk");
+  const [politicianRelation, setPoliticianRelation] = useState<PoliticianRelation>("sojusznik");
   const [recordingType, setRecordingType] = useState<RecordingType>("wywiad");
   const [publicationDate, setPublicationDate] = useState("");
   const [enableBiometrics, setEnableBiometrics] = useState(true);
@@ -182,6 +188,7 @@ export const IngestForm: React.FC = () => {
           zakres_analizy: analysisScope,
           polityk_docelowy: targetPolitician.trim() || undefined,
           rola_polityka: politicianRole,
+          relacja_polityka: politicianRelation,
           profile_id: profileId,
           gemini_api_key: customKey,
         });
@@ -202,6 +209,7 @@ export const IngestForm: React.FC = () => {
         formData.append("profile_id", profileId);
         if (targetPolitician.trim()) formData.append("polityk_docelowy", targetPolitician.trim());
         formData.append("rola_polityka", politicianRole);
+        formData.append("relacja_polityka", politicianRelation);
         if (customKey) formData.append("gemini_api_key", customKey);
 
         const created = await uploadRecordingFile(formData);
@@ -222,6 +230,7 @@ export const IngestForm: React.FC = () => {
         formData.append("profile_id", profileId);
         if (targetPolitician.trim()) formData.append("polityk_docelowy", targetPolitician.trim());
         formData.append("rola_polityka", politicianRole);
+        formData.append("relacja_polityka", politicianRelation);
         if (customKey) formData.append("gemini_api_key", customKey);
 
         const created = await uploadRecordingFile(formData);
@@ -690,6 +699,64 @@ export const IngestForm: React.FC = () => {
           </div>
         </div>
 
+        {/* Strategia sztabowa: Sojusznik vs Przeciwnik */}
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${politicianRelation === "przeciwnik" ? "bg-rose-500 animate-pulse" : "bg-emerald-400"}`} />
+              <span>Relacja ze sztabem / Cel raportu *</span>
+            </label>
+            <span className={`text-[10px] font-mono ${politicianRelation === "przeciwnik" ? "text-rose-400" : "text-emerald-400"}`}>
+              {politicianRelation === "przeciwnik" ? "TRYB OFENSYWNY (OPPOSITION RESEARCH)" : "TRYB AUDYTU (WSPARCIE SZTABOWE)"}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Opcja 1: Sojusznik */}
+            <div
+              onClick={() => setPoliticianRelation("sojusznik")}
+              className={`p-3.5 border cursor-pointer transition-all rounded-xl relative overflow-hidden ${
+                politicianRelation === "sojusznik"
+                  ? "border-emerald-500/80 bg-emerald-950/30 ring-1 ring-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                  : "border-studio-border/70 bg-studio-surface/40 hover:border-slate-700 text-slate-400"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <ShieldCheck className={`w-4 h-4 ${politicianRelation === "sojusznik" ? "text-emerald-400" : "text-slate-500"}`} />
+                <span className={`text-xs font-bold ${politicianRelation === "sojusznik" ? "text-emerald-300" : "text-slate-300"}`}>
+                  Sojusznik (Nasz kandydat)
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Raport zawiera <strong className="text-slate-200">wskazania i dyrektywy sztabowe</strong>, wygaszanie błędów, wzmacnianie atutów oraz gotowe riposty do trudnych pytań.
+              </p>
+            </div>
+
+            {/* Opcja 2: Przeciwnik */}
+            <div
+              onClick={() => setPoliticianRelation("przeciwnik")}
+              className={`p-3.5 border cursor-pointer transition-all rounded-xl relative overflow-hidden ${
+                politicianRelation === "przeciwnik"
+                  ? "border-rose-500/80 bg-rose-950/35 ring-1 ring-rose-500/50 shadow-[0_0_20px_rgba(244,63,94,0.25)]"
+                  : "border-studio-border/70 bg-studio-surface/40 hover:border-slate-700 text-slate-400"
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <Target className={`w-4 h-4 ${politicianRelation === "przeciwnik" ? "text-rose-400" : "text-slate-500"}`} />
+                <span className={`text-xs font-bold ${politicianRelation === "przeciwnik" ? "text-rose-300" : "text-slate-300"}`}>
+                  Przeciwnik / Oponent
+                </span>
+                <span className="text-[9px] font-mono bg-rose-950/80 text-rose-300 border border-rose-500/40 px-1.5 py-0.2 rounded ml-auto">
+                  RYWAL / MEDIA
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Raport dla sztabu: <strong className="text-rose-200">słabości psychiczne</strong>, instrukcja <strong className="text-rose-200">jak wyprowadzić go z równowagi</strong>, pytania-pułapki i amunicja do spotów (polityk / dziennikarz / działacz).
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Wybór zakresu profilowania */}
         <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between mb-1">
@@ -779,17 +846,30 @@ export const IngestForm: React.FC = () => {
         <button
           type="submit"
           disabled={loading || (tab === "screen" && !capturedBlob)}
-          className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-cyan-500 via-blue-600 to-cyan-500 hover:from-cyan-400 hover:to-blue-500 text-slate-950 text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-glow-cyan disabled:opacity-50 mt-5 active:scale-[0.99]"
+          className={`w-full flex items-center justify-center gap-2 py-3 text-xs font-black uppercase tracking-wider rounded-xl transition-all disabled:opacity-50 mt-5 active:scale-[0.99] ${
+            politicianRelation === "przeciwnik"
+              ? "bg-gradient-to-r from-rose-600 via-red-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white shadow-[0_0_25px_rgba(244,63,94,0.35)]"
+              : "bg-gradient-to-r from-cyan-500 via-blue-600 to-cyan-500 hover:from-cyan-400 hover:to-blue-500 text-slate-950 shadow-glow-cyan"
+          }`}
         >
           {loading ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+              <Loader2 className={`w-4 h-4 animate-spin ${politicianRelation === "przeciwnik" ? "text-white" : "text-slate-950"}`} />
               Inicjalizacja E-PROFILERA...
             </>
           ) : (
             <>
-              Rozpocznij profilowanie materiału
-              <ArrowRight className="w-4 h-4" />
+              {politicianRelation === "przeciwnik" ? (
+                <>
+                  <Target className="w-4 h-4" />
+                  <span>Rozpocznij analizę przeciwnika (Wektory ataku)</span>
+                </>
+              ) : (
+                <>
+                  <span>Rozpocznij audyt sztabowy materiału</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </>
           )}
         </button>
