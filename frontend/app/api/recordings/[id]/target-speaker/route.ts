@@ -16,39 +16,108 @@ export async function PATCH(
     }
 
     const payload = await request.json();
-    const updateData: Record<string, any> = {
+    const updateRecording: Record<string, any> = {
       updated_at: new Date().toISOString(),
     };
 
-    if (payload.speaker_tag) updateData.speaker_docelowy_tag = payload.speaker_tag;
-    if (payload.imie_nazwisko) updateData.polityk_docelowy = payload.imie_nazwisko;
-    if (payload.rola) updateData.rola_polityka = payload.rola;
-    if (payload.relacja) updateData.relacja_polityka = payload.relacja;
+    if (payload.speaker_tag) updateRecording.speaker_docelowy_tag = payload.speaker_tag;
+    if (payload.imie_nazwisko) updateRecording.polityk_docelowy = payload.imie_nazwisko;
+    if (payload.rola) updateRecording.rola_polityka = payload.rola;
+    // Tabela recordings w Supabase nie ma kolumny relacja_polityka — nie wysyłamy jej tutaj!
 
     if (SUPABASE_URL && SUPABASE_SERVICE_ROLE) {
-      const sRes = await fetch(
-        `${SUPABASE_URL}/rest/v1/recordings?id=eq.${id}&select=*,psychometric_profile:psychometric_profiles(*)`,
+      // 1. Zaktualizuj metadane w tabeli recordings
+      if (Object.keys(updateRecording).length > 1) {
+        await fetch(
+          `${SUPABASE_URL}/rest/v1/recordings?id=eq.${id}`,
+          {
+            method: "PATCH",
+            headers: {
+              apikey: SUPABASE_SERVICE_ROLE,
+              Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+              "Content-Type": "application/json",
+              Prefer: "return=minimal",
+            },
+            body: JSON.stringify(updateRecording),
+          }
+        );
+      }
+
+      // 2. Jeśli przekazano nową relację (sojusznik / przeciwnik), zapisz ją w psychometric_profiles
+      if (payload.relacja) {
+        try {
+          const pRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/psychometric_profiles?recording_id=eq.${id}&select=id,surowe_wnioski_ai`,
+            {
+              headers: {
+                apikey: SUPABASE_SERVICE_ROLE,
+                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+              },
+            }
+          );
+          if (pRes.ok) {
+            const profiles = await pRes.json();
+            if (profiles && profiles.length > 0) {
+              const prof = profiles[0];
+              const surowe = typeof prof.surowe_wnioski_ai === "object" && prof.surowe_wnioski_ai !== null
+                ? prof.surowe_wnioski_ai
+                : {};
+              const updatedSurowe = {
+                ...surowe,
+                relacja_polityka: payload.relacja,
+              };
+              await fetch(
+                `${SUPABASE_URL}/rest/v1/psychometric_profiles?id=eq.${prof.id}`,
+                {
+                  method: "PATCH",
+                  headers: {
+                    apikey: SUPABASE_SERVICE_ROLE,
+                    Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
+                    "Content-Type": "application/json",
+                    Prefer: "return=minimal",
+                  },
+                  body: JSON.stringify({ surowe_wnioski_ai: updatedSurowe }),
+                }
+              );
+            }
+          }
+        } catch (pErr) {
+          console.warn("Błąd zapisu relacji w psychometric_profiles:", pErr);
+        }
+      }
+
+      // 3. Pobierz pełne nagranie z profilami, markerami i segmentami
+      const fullRes = await fetch(
+        `${SUPABASE_URL}/rest/v1/recordings?id=eq.${id}&select=*,psychometric_profile:psychometric_profiles(*),markers(*),segments(*)`,
         {
-          method: "PATCH",
           headers: {
             apikey: SUPABASE_SERVICE_ROLE,
             Authorization: `Bearer ${SUPABASE_SERVICE_ROLE}`,
-            "Content-Type": "application/json",
-            Prefer: "return=representation",
           },
-          body: JSON.stringify(updateData),
         }
       );
 
-      if (sRes.ok) {
-        const rows = await sRes.json();
+      if (fullRes.ok) {
+        const rows = await fullRes.json();
         if (rows && rows.length > 0) {
-          return NextResponse.json(rows[0]);
+          const row = rows[0];
+          let profile = row.psychometric_profile;
+          if (Array.isArray(profile)) profile = profile[0] || null;
+          return NextResponse.json({
+            ...row,
+            relacja_polityka: payload.relacja || profile?.surowe_wnioski_ai?.relacja_polityka || "sojusznik",
+            psychometric_profile: profile,
+          });
         }
       }
     }
 
-    return NextResponse.json({ success: true, ...updateData });
+    return NextResponse.json({
+      success: true,
+      id,
+      ...updateRecording,
+      relacja_polityka: payload.relacja || "sojusznik",
+    });
   } catch (err: any) {
     console.error("Błąd aktualizacji mówcy w Supabase:", err);
     return NextResponse.json({ error: err.message || "Błąd serwera" }, { status: 500 });

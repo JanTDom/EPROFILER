@@ -131,7 +131,10 @@ export async function POST(request: Request) {
       updated_at: now,
     };
 
-    await fetch(`${SUPABASE_URL}/rest/v1/recordings`, {
+    // recordings w Supabase nie ma kolumny relacja_polityka — zapisujemy ją bezpiecznie w psychometric_profiles
+    const { relacja_polityka: _unusedRelacja, ...dbInitialRec } = initialRec;
+
+    const postRes = await fetch(`${SUPABASE_URL}/rest/v1/recordings`, {
       method: "POST",
       headers: {
         apikey: SUPABASE_SERVICE_ROLE,
@@ -139,8 +142,11 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
         Prefer: "return=minimal",
       },
-      body: JSON.stringify(initialRec),
+      body: JSON.stringify(dbInitialRec),
     });
+    if (!postRes.ok) {
+      console.warn("Błąd zapisu initialRec w Supabase:", await postRes.text());
+    }
 
     // 2. Zapytanie bezpośrednie do Gemini 3.6 Flash z multimodalnym YouTube URL lub plikiem
     const targetInfo = targetPerson
@@ -699,7 +705,10 @@ Zwróć poprawny JSON o schemacie:
       skutecznosc_argumentacji: wnioski.sila_argumentacji || null,
       perswazyjnosc_odbiorcow: wnioski.czy_odbiorcy_to_kupia || null,
       radzenie_z_adwersarzami: wnioski.pojedynek_z_adwersarzami || null,
-      surowe_wnioski_ai: analysis,
+      surowe_wnioski_ai: {
+        ...analysis,
+        relacja_polityka: politicianRelation,
+      },
     };
 
     await fetch(`${SUPABASE_URL}/rest/v1/psychometric_profiles`, {
@@ -720,7 +729,6 @@ Zwróć poprawny JSON o schemacie:
       speaker_docelowy_tag: selectedSpeakerTag,
       rozpoznani_mowcy: speakers,
       format_materialu: formatMaterialuFinal,
-      relacja_polityka: politicianRelation,
       status_przetwarzania: "ZAKONCZONE",
       krok_postepu: isAudio ? "Analiza akustyczna głosu i profilowanie zakończone sukcesem." : "Analiza behawioralna i profilowanie zakończone sukcesem.",
       procent_postepu: 100,
@@ -728,7 +736,7 @@ Zwróć poprawny JSON o schemacie:
       updated_at: new Date().toISOString(),
     };
 
-    await fetch(`${SUPABASE_URL}/rest/v1/recordings?id=eq.${recordingId}`, {
+    const patchRes = await fetch(`${SUPABASE_URL}/rest/v1/recordings?id=eq.${recordingId}`, {
       method: "PATCH",
       headers: {
         apikey: SUPABASE_SERVICE_ROLE,
@@ -737,10 +745,14 @@ Zwróć poprawny JSON o schemacie:
       },
       body: JSON.stringify(updatedRec),
     });
+    if (!patchRes.ok) {
+      console.warn("Błąd aktualizacji nagrania w Supabase:", await patchRes.text());
+    }
 
     return NextResponse.json({
       ...initialRec,
       ...updatedRec,
+      relacja_polityka: politicianRelation,
       psychometric_profile: profileEntry,
     });
   } catch (error: any) {

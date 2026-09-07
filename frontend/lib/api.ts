@@ -10,8 +10,14 @@ function normalizeRecording(rec: any): Recording {
   if (Array.isArray(profile)) {
     profile = profile[0] || undefined;
   }
+  const relacja: PoliticianRelation =
+    rec.relacja_polityka ||
+    profile?.surowe_wnioski_ai?.relacja_polityka ||
+    (profile?.surowe_wnioski_ai?.analiza_przeciwnika ? "przeciwnik" : undefined) ||
+    "sojusznik";
   return {
     ...rec,
+    relacja_polityka: relacja,
     psychometric_profile: profile,
   };
 }
@@ -229,7 +235,6 @@ export async function createRecordingFromUrl(data: {
       zakres_analizy: data.zakres_analizy ?? "pelny",
       polityk_docelowy: data.polityk_docelowy?.trim() || null,
       rola_polityka: data.rola_polityka?.trim() || "Badany polityk",
-      relacja_polityka: relacja,
       rozpoznani_mowcy: [],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -268,7 +273,9 @@ export async function setTargetSpeaker(
     });
     if (res.ok) {
       const data = await res.json();
-      return normalizeRecording(data);
+      if (data && (data.psychometric_profile || data.status_przetwarzania || data.tytul)) {
+        return normalizeRecording(data);
+      }
     }
   } catch (err) {
     console.warn("Serverless target-speaker update failed:", err);
@@ -283,7 +290,6 @@ export async function setTargetSpeaker(
       if (payload.speaker_tag) updateData.speaker_docelowy_tag = payload.speaker_tag;
       if (payload.imie_nazwisko) updateData.polityk_docelowy = payload.imie_nazwisko;
       if (payload.rola) updateData.rola_polityka = payload.rola;
-      if (payload.relacja) updateData.relacja_polityka = payload.relacja;
 
       const sRes = await fetch(`${SUPABASE_URL}/rest/v1/recordings?id=eq.${recordingId}&select=*,psychometric_profile:psychometric_profiles(*),markers(*),segments(*)`, {
         method: "PATCH",
@@ -299,7 +305,9 @@ export async function setTargetSpeaker(
       if (sRes.ok) {
         const rows = await sRes.json();
         if (rows && rows.length > 0) {
-          return normalizeRecording(rows[0]);
+          const rec = normalizeRecording(rows[0]);
+          if (payload.relacja) rec.relacja_polityka = payload.relacja;
+          return rec;
         }
       }
     } catch (e) {

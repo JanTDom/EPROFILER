@@ -97,6 +97,13 @@ export default function RecordingDetailPage() {
       return {
         ...prev,
         relacja_polityka: newRelation,
+        psychometric_profile: prev.psychometric_profile ? {
+          ...prev.psychometric_profile,
+          surowe_wnioski_ai: {
+            ...(prev.psychometric_profile.surowe_wnioski_ai || {}),
+            relacja_polityka: newRelation,
+          }
+        } : prev.psychometric_profile,
       };
     });
 
@@ -109,9 +116,14 @@ export default function RecordingDetailPage() {
         relacja: newRelation,
       });
       if (updated) {
-        setRecording({
-          ...updated,
-          relacja_polityka: newRelation,
+        setRecording((prev) => {
+          if (!prev) return updated;
+          return {
+            ...prev,
+            ...updated,
+            relacja_polityka: newRelation,
+            psychometric_profile: updated.psychometric_profile || prev.psychometric_profile,
+          };
         });
       }
     } catch (err: any) {
@@ -123,13 +135,35 @@ export default function RecordingDetailPage() {
     try {
       setSwitchingError(null);
       const effectiveRelation = relation || modalRelation;
+      setActiveRelation(effectiveRelation);
+      setRecording((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          speaker_docelowy_tag: speakerTag,
+          polityk_docelowy: name || prev.polityk_docelowy,
+          rola_polityka: role || prev.rola_polityka,
+          relacja_polityka: effectiveRelation,
+        };
+      });
+
       const updated = await setTargetSpeaker(id, {
         speaker_tag: speakerTag,
         imie_nazwisko: name || customPoliticianName || undefined,
         rola: role || "Badany polityk",
         relacja: effectiveRelation,
       });
-      setRecording(updated);
+      if (updated) {
+        setRecording((prev) => {
+          if (!prev) return updated;
+          return {
+            ...prev,
+            ...updated,
+            relacja_polityka: effectiveRelation,
+            psychometric_profile: updated.psychometric_profile || prev.psychometric_profile,
+          };
+        });
+      }
       setIsSwitchingSpeaker(false);
     } catch (err: any) {
       setSwitchingError(err.message || "Nie udało się zmienić celu profilowania.");
@@ -1300,7 +1334,7 @@ export default function RecordingDetailPage() {
                   </>
                 )}
               </div>
-            ) : (
+            ) : (recording.status_przetwarzania === "PROFILOWANIE_AI" || recording.status_przetwarzania === "OCZEKUJE") ? (
               <div className="p-8 bg-studio-surface/40 border border-cyan-500/30 rounded-xl flex flex-col items-center justify-center text-center space-y-3">
                 <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin" />
                 <div className="text-xs font-bold text-slate-100">
@@ -1321,6 +1355,19 @@ export default function RecordingDetailPage() {
                     <RefreshCw className="w-2.5 h-2.5" /> Wymuś odświeżenie analizy
                   </button>
                 </div>
+              </div>
+            ) : (
+              <div className="p-6 bg-studio-surface/40 border border-slate-700/60 rounded-xl text-center space-y-2">
+                <div className="text-xs font-semibold text-slate-300">
+                  Profilowanie tego materiału jest gotowe.
+                </div>
+                <button
+                  type="button"
+                  onClick={loadData}
+                  className="px-3 py-1.5 text-xs font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded-lg hover:bg-cyan-500/30 transition-colors inline-flex items-center gap-1.5"
+                >
+                  <RefreshCw className="w-3 h-3" /> Odśwież telemetrię
+                </button>
               </div>
             )}
           </div>
