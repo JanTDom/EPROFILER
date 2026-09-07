@@ -341,6 +341,11 @@ export async function uploadRecordingFile(formData: FormData): Promise<Recording
       method: "POST",
       body: formData,
     });
+    if (res.status === 413) {
+      throw new Error(
+        "Nagrany plik wideo przekracza dopuszczalny rozmiar w chmurze (4.5 MB). Zarejestruj krótszy fragment wypowiedzi (do 1–1.5 minuty) i spróbuj ponownie."
+      );
+    }
     if (res.ok) {
       const created = await res.json();
       return normalizeRecording(created);
@@ -356,18 +361,21 @@ export async function uploadRecordingFile(formData: FormData): Promise<Recording
     console.warn("Cloud /api/analyze upload fallback:", err);
   }
 
-  // 2. Fallback do lokalnego API
-  try {
-    const res = await fetch(`${API_BASE}/api/recordings/upload`, {
-      method: "POST",
-      body: formData,
-      signal: AbortSignal.timeout(60000),
-    });
-    if (res.ok) {
-      return res.json();
+  // 2. Fallback do lokalnego API (tylko w środowisku deweloperskim localhost)
+  const isLocalEnv = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+  if (isLocalEnv) {
+    try {
+      const res = await fetch(`${API_BASE}/api/recordings/upload`, {
+        method: "POST",
+        body: formData,
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) {
+        return res.json();
+      }
+    } catch (err: any) {
+      console.warn("API_BASE upload failed:", err);
     }
-  } catch (err: any) {
-    console.warn("API_BASE upload failed:", err);
   }
 
   // 3. Fallback do bezpośredniej rejestracji w Supabase
@@ -385,7 +393,6 @@ export async function uploadRecordingFile(formData: FormData): Promise<Recording
       profile_id: (formData.get("profile_id") as string) || "profile_main",
       polityk_docelowy: (formData.get("polityk_docelowy") as string) || null,
       rola_polityka: (formData.get("rola_polityka") as string) || "Badany polityk",
-      relacja_polityka: (formData.get("relacja_polityka") as string) || "sojusznik",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };

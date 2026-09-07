@@ -248,7 +248,11 @@ export const IngestForm: React.FC = () => {
         ? "video/webm"
         : "video/mp4";
 
-      const recorder = new MediaRecorder(combinedStream, { mimeType });
+      const recorder = new MediaRecorder(combinedStream, {
+        mimeType,
+        videoBitsPerSecond: 350000, // 350 kbps — optymalna kompresja dla AI, 1 min = ~2.6 MB (mieści się w limicie 4.5 MB Vercel)
+        audioBitsPerSecond: 64000,  // 64 kbps — krystaliczna czystość dźwięku mowy
+      });
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
@@ -861,30 +865,51 @@ export const IngestForm: React.FC = () => {
                     />
                   </div>
 
-                  {/* Status audio w nagranym pliku */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900/80 border border-slate-800 rounded-lg text-xs font-mono">
-                    <div className="flex items-center gap-2">
-                      {recordedHasAudio ? (
-                        <div className="flex items-center gap-1.5 text-emerald-300">
-                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                          <span>Zarejestrowano wideo i dźwięk: <strong>{formatTimer(captureSeconds)}</strong> (włącz dźwięk w odtwarzaczu powyżej, by sprawdzić)</span>
+                  {/* Status audio i rozmiar pliku w nagranym materiale */}
+                  {(() => {
+                    const sizeMb = capturedBlob ? (capturedBlob.size / (1024 * 1024)).toFixed(1) : "0";
+                    const isExceeding = capturedBlob ? capturedBlob.size > 4.2 * 1024 * 1024 : false;
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-900/80 border border-slate-800 rounded-lg text-xs font-mono">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              {recordedHasAudio ? (
+                                <div className="flex items-center gap-1.5 text-emerald-300">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                                  <span>Zarejestrowano wideo i dźwięk: <strong>{formatTimer(captureSeconds)}</strong> (waga: {sizeMb} MB)</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1.5 text-amber-300">
+                                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                                  <span>Zarejestrowano wideo: <strong>{formatTimer(captureSeconds)}</strong> (brak audio — zalecamy nagrać z dźwiękiem)</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {isExceeding ? (
+                                <span className="text-amber-400 font-bold">
+                                  ⚠️ Plik waży {sizeMb} MB (limit chmury: 4.2 MB). Rekomendujemy nagranie fragmentu do 1–1.5 minuty, aby audyt przeszedł pomyślnie.
+                                </span>
+                              ) : (
+                                <span className="text-emerald-400">
+                                  ✅ Rozmiar pliku ({sizeMb} MB) idealnie zoptymalizowany pod szybki audyt AI w chmurze.
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={resetScreenCapture}
+                            className="text-[11px] text-slate-400 hover:text-red-400 flex items-center gap-1 underline transition-colors cursor-pointer"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            Nagraj ponownie
+                          </button>
                         </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 text-amber-300">
-                          <AlertTriangle className="w-4 h-4 text-amber-400" />
-                          <span>Zarejestrowano wideo: <strong>{formatTimer(captureSeconds)}</strong> (brak ścieżki audio — zalecamy nagrać ponownie z dźwiękiem)</span>
-                        </div>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={resetScreenCapture}
-                      className="text-[11px] text-slate-400 hover:text-red-400 flex items-center gap-1 underline transition-colors cursor-pointer"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      Nagraj ponownie
-                    </button>
-                  </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
             </div>
