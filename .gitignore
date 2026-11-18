@@ -20,6 +20,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # Magazyn mediów i tymczasowy cache
+storage/*.mp3
+storage/*.wav
+storage/*.m4a
 storage/media/*
 !storage/media/.gitkeep
 storage/cache/*

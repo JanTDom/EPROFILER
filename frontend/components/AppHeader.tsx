@@ -52,6 +52,12 @@ export const AppHeader: React.FC = () => {
               <span className="text-slate-600">//</span> Repozytorium
             </Link>
             <Link
+              href="/persons"
+              className="hover:text-amber-400 transition-colors flex items-center gap-1.5 text-amber-400/90 font-bold whitespace-nowrap flex-shrink-0"
+            >
+              <span className="text-slate-600">//</span> Baza Wiedzy
+            </Link>
+            <Link
               href="/duel"
               className="hover:text-amber-400 transition-colors flex items-center gap-1.5 text-amber-300/90 font-bold whitespace-nowrap flex-shrink-0"
             >

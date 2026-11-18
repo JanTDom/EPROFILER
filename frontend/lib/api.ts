@@ -488,7 +488,7 @@ export function subscribeToProgress(
               id: recordingId,
               status: r.status_przetwarzania,
               krok: r.krok_postepu || "Trwa analiza...",
-              procent: r.procent_postepu || 50,
+              procent: typeof r.procent_postepu === "number" ? r.procent_postepu : 50,
               blad: r.blad,
             };
 
@@ -565,4 +565,52 @@ export function getRecordingPdfUrl(recordingId: string, relation?: PoliticianRel
     return `/api/recordings/${recordingId}/pdf?relation=${relation}`;
   }
   return `/api/recordings/${recordingId}/pdf`;
+}
+
+// ==================== BAZA WIEDZY I DOSSIER POLITYKÓW ====================
+
+export async function fetchPersons(): Promise<any[]> {
+  try {
+    const res = await fetch(`${API_BASE}/api/persons`, { cache: "no-store" });
+    if (res.ok) return res.json();
+  } catch (e) {
+    console.warn("fetchPersons failed:", e);
+  }
+  return [];
+}
+
+export async function createPerson(data: { imie_nazwisko: string; funkcja?: string; partia?: string; uwagi?: string }): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/persons`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error("Błąd tworzenia profilu osoby");
+  return res.json();
+}
+
+export async function fetchPersonDossier(personId: string): Promise<any> {
+  try {
+    const res = await fetch(`${API_BASE}/api/persons/${personId}/dossier`, { cache: "no-store" });
+    if (res.ok) return res.json();
+  } catch (e) {
+    console.warn("fetchPersonDossier failed:", e);
+  }
+  return null;
+}
+
+export async function bootstrapPersonKnowledge(personId: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/persons/${personId}/bootstrap`, {
+    method: "POST"
+  });
+  if (!res.ok) throw new Error("Błąd pobierania wiedzy z sieci");
+  return res.json();
+}
+
+export async function reconcilePersonRecordings(personId: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/api/persons/${personId}/reconcile`, {
+    method: "POST"
+  });
+  if (!res.ok) throw new Error("Błąd przeliczania nagrań");
+  return res.json();
 }

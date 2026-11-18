@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import Dict, Any, List, Optional
 import httpx
 from app.config import settings
@@ -26,7 +27,18 @@ OBOWIĄZUJĄ CIĘ ZASADY AUDYTU SZTABOWEGO I SPIN DOCTORINGU:
 4. ANALIZA POWIERZCHNI ATAKU (AMUNICJA DLA OPONENTÓW): Identyfikujesz niefortunne sformułowania i tzw. 'samobóje', które sztaby konkurencji wytną na rolki, paski i spoty jako dowód słabości lub nieszczerości.
 5. WARSZTAT WYSTĄPIEŃ I DYKCJA: Oceniasz tempo mowy, intonację (unikanie intonacji pytającej przy twierdzeniach), pauzy retoryczne i natrętne wypełniacze.
 6. SKRYPTY NAPRAWCZE: Każdy zdiagnozowany błąd musi mieć gotowy szablon naprawczy ('Zamiast: X -> Mów: Y').
-7. KALIBRACJA OCENY: Kompresuj oceny ku środkowi skali (na skali 1-10 unikaj skrajności 1 czy 10; realistyczne, krytyczne wystąpienia pod presją mieszczą się typowo w przedziale 4-7/10).
+7. RZETELNA OCENA PUNKTOWA (1-10): Bezwzględny zakaz asekuracyjnego uciekania w jednakową ocenę 6/10! Ocena punktowa musi być zróżnicowana i oparta o realny bilans 4 filarów:
+   - Filar 1 (waga 25%): Opanowanie emocjonalne i mowa ciała/głos (pokerowa twarz vs wycieki stresu/AU14/drżenie głosu).
+   - Filar 2 (waga 30%): Siła argumentacji i spójność (twarde dane i logika vs frazesy, luki i samobóje).
+   - Filar 3 (waga 25%): Kontrola narracji i radzenie sobie z trudnymi pytaniami (agenda setting, celne riposty vs ucieczki i defensywa).
+   - Filar 4 (waga 20%): Wiarygodność i nośność medialna (naturalność i charyzma vs sztuczność, nośne setki).
+   Skala ocen:
+   * 1-2: Katastrofa wizerunkowa, dekompozycja, panika, ucieczka przed pytaniami, kardynalne samobóje.
+   * 3-4: Zdecydowana porażka, dominacja dziennikarza/oponenta, rażące uniki, widoczny stres i słabość.
+   * 5-6: Występ przeciętny, odtwórczy przekaz, brak błysku, widoczne napięcia i uniki przy trudnych wątkach.
+   * 7-8: Solidny sukces lidera, wysoka kontrola, celne riposty z faktami, opanowanie pod presją.
+   * 9-10: Wybitne mistrzostwo retoryczne, pełne narzucenie agendy, bezbłędne puenty, brak wycieków stresu.
+   Oceń wystąpienie odważnie i rzetelnie według stanu faktycznego (nie domyślne 6)!
 8. ZWIĘZŁOŚĆ I GĘSTOŚĆ INFORMACYJNA: Wszystkie opisy i uzasadnienia formułuj zwięźle, esencjonalnie, unikając rozwlekłości.
 9. FORMAT JĘZYKOWY: Pisz czystą polszczyzną w sentence case (tylko pierwsza litera zdania wielka). Odpowiadaj wyłącznie poprawnym JSON-em."""
 
@@ -67,7 +79,10 @@ class GeminiProfilerService:
             
             data = resp.json()
             try:
-                text_content = data["candidates"][0]["content"]["parts"][0]["text"]
+                text_content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                if text_content.startswith("```"):
+                    text_content = re.sub(r"^```(?:json)?\s*", "", text_content, flags=re.I)
+                    text_content = re.sub(r"\s*```$", "", text_content)
                 return json.loads(text_content)
             except (KeyError, IndexError, json.JSONDecodeError) as e:
                 raise RuntimeError(f"Nie udało się sparsować odpowiedzi JSON od Gemini: {str(e)}")
@@ -322,7 +337,7 @@ Zwróć poprawny JSON o schemacie:
   }},
   "analiza_przeciwnika": {{
     "glowna_podatnosc_oponenta": "2-3 zdaniowa esencja słabości oponenta w tym nagraniu",
-    "ocena_podatnosci_na_atak_1_10": 8,
+    "ocena_podatnosci_na_atak_1_10": 7,
     "punkty_wejscia_argumentacyjne": [
       {{
         "tytul_wektora": "Nazwa luki logicznej lub uniku w sentence case",
@@ -366,7 +381,7 @@ ZASADY AUDYTU SZTABOWEGO:
 5. AMUNICJA DLA OPONENTÓW: Wskaż sformułowania, które przeciwnicy wytną na złośliwe setki, rolki czy memy (tzw. samobóje).
 6. SKRYPTY KOREKCYJNE: Do wytkniętych błędów podaj gotową, bezpieczną ripostę sztabową („Zamiast X -> Mów Y”).
 7. WARSZTAT WYSTĄPIEŃ I EMISJI: Oceń tempo, intonację (unikanie uptalku), pauzy i wypełniacze.
-8. KALIBRACJA OCENY: Skompresuj ocenę punktową 1-10 w stronę środka skali (zazwyczaj 4–7/10 w zależności od skali uchybień; unikaj zawyżania do 8–10 oraz skrajnego 1–2).
+8. RZETELNA KALIBRACJA OCENY (1-10): Oblicz ocenę 1-10 w pełnym spektrum na podstawie bilansu atutów do błędów, opanowania emocji, siły argumentacji i radzenia sobie z presją. Kategoryczny zakaz asekuracji i domyślnego wystawiania noty 6/10 — nota musi odzwierciedlać faktyczną jakość występu (od 2-3 przy kompromitacji/panice, przez 5-6 przy przeciętności, po 8-9 przy pełnej dominacji i sukcesie wizerunkowym).
 9. FORMAT JĘZYKOWY: Sentence case (tylko pierwsza litera zdania wielka). Odpowiedź formułuj zwięźle, esencjonalnie i z wysoką gęstością faktów.
 
 Zwróć poprawny JSON o schemacie:
@@ -393,7 +408,7 @@ Zwróć poprawny JSON o schemacie:
   }},
   "marketing_polityczny": {{
     "werdykt": "Występ poprawny z zastrzeżeniami | Bilans mieszany ze wskazaniem na błędy | Sukces wizerunkowy | Porażka wizerunkowa",
-    "ocena_punktowa_1_10": 6,
+    "ocena_punktowa_1_10": 7,
     "uzasadnienie_werdyktu": "Zwięzłe, bezkompromisowe uzasadnienie werdyktu: bilans zysków i strat, główne punkty krytyczne i przyczyna takiej noty.",
     "glowne_plusy": [
       {{

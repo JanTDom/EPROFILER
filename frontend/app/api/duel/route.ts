@@ -201,7 +201,11 @@ Zwróć kompletny werdykt w formacie JSON.`,
       throw new Error("Pusta odpowiedź od modelu AI.");
     }
 
-    const duelResult = JSON.parse(candidateText);
+    let cleanedText = candidateText.trim();
+    if (cleanedText.startsWith("```")) {
+      cleanedText = cleanedText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    }
+    const duelResult = JSON.parse(cleanedText);
 
     return NextResponse.json({
       duel: duelResult,

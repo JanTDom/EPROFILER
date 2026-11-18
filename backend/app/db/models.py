@@ -35,6 +35,11 @@ class Person(Base):
     segments = relationship("Segment", back_populates="person")
     markers = relationship("Marker", back_populates="person")
     baseline = relationship("PersonBaseline", back_populates="person", uselist=False)
+    stances = relationship("PersonStance", back_populates="person", cascade="all, delete-orphan")
+    flip_flops = relationship("PersonFlipFlop", back_populates="person", cascade="all, delete-orphan")
+    vulnerabilities = relationship("PersonVulnerability", back_populates="person", cascade="all, delete-orphan")
+    rhetorical_patterns = relationship("PersonRhetoricalPattern", back_populates="person", cascade="all, delete-orphan")
+    external_facts = relationship("PersonExternalFact", back_populates="person", cascade="all, delete-orphan")
 
 
 class Recording(Base):
@@ -285,4 +290,110 @@ class PsychometricProfile(Base):
     surowe_wnioski_ai = Column(JSON, default=dict) # kompletny obiekt wniosków z modelu Gemini
 
     recording = relationship("Recording", back_populates="psychometric_profile")
+
+
+class PersonStance(Base):
+    """Poglądy, tezy i zdeklarowane stanowiska polityka wyekstrahowane z wypowiedzi lub źródeł."""
+    __tablename__ = "person_stances"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    person_id = Column(String(36), ForeignKey("persons.id", ondelete="CASCADE"), nullable=False, index=True)
+    recording_id = Column(String(36), ForeignKey("recordings.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    temat = Column(String(255), nullable=False, index=True)
+    podtemat = Column(String(255), nullable=True)
+    stanowisko_opis = Column(Text, nullable=False)
+    polaryzacja = Column(String(50), nullable=False, default="neutralne") # "popiera", "sprzeciwia", "neutralne", "unika"
+    pewnosc_deklaracji = Column(Float, default=0.85) # 0.0 - 1.0
+    cytat_dowodowy = Column(Text, nullable=True)
+    zrodlo_typ = Column(String(50), default="wywiad") # "wywiad", "glosowanie", "siec"
+    data_deklaracji = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    person = relationship("Person", back_populates="stances")
+    recording = relationship("Recording")
+
+
+class PersonFlipFlop(Base):
+    """Rejestr wykrytych sprzeczności w czasie i wolt poglądowych polityka."""
+    __tablename__ = "person_flip_flops"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    person_id = Column(String(36), ForeignKey("persons.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    temat = Column(String(255), nullable=False, index=True)
+    stopien_wolty = Column(String(50), default="znaczna") # "drobna_korekta", "znaczna", "radykalny_zwrot"
+    opis_sprzecznosci = Column(Text, nullable=False)
+
+    stanowisko_wczesniejsze = Column(Text, nullable=False)
+    cytat_wczesniejszy = Column(Text, nullable=True)
+    data_wczesniejsza = Column(DateTime, nullable=True)
+    zrodlo_wczesniejsze = Column(String(255), nullable=True)
+
+    stanowisko_pozniejsze = Column(Text, nullable=False)
+    cytat_pozniejszy = Column(Text, nullable=True)
+    data_pozniejsza = Column(DateTime, nullable=True)
+    zrodlo_pozniejsze = Column(String(255), nullable=True)
+
+    recording_id_a = Column(String(36), ForeignKey("recordings.id", ondelete="SET NULL"), nullable=True)
+    recording_id_b = Column(String(36), ForeignKey("recordings.id", ondelete="SET NULL"), nullable=True)
+
+    analiza_motywu = Column(Text, nullable=True) # np. zmiana linii partyjnej, presja opinii publicznej
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    person = relationship("Person", back_populates="flip_flops")
+
+
+class PersonVulnerability(Base):
+    """Czułe punkty polityka: tematy i pytania, które powtarzalnie wywołują stres i dekompozycję."""
+    __tablename__ = "person_vulnerabilities"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    person_id = Column(String(36), ForeignKey("persons.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    temat_trigger = Column(String(255), nullable=False, index=True)
+    srednie_napiecie_stresu = Column(Integer, default=50) # 0 - 100
+    typowa_reakcja_obronna = Column(String(255), nullable=False) # np. agresywny atak, drżenie głosu, ucieczka w statystyki
+    liczba_odnotowan = Column(Integer, default=1)
+    ostatnie_zalamanie_data = Column(DateTime, default=datetime.utcnow)
+    przyklady_cytatow = Column(JSON, default=list) # [{recording_id, cytat, opis_reakcji, data}]
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    person = relationship("Person", back_populates="vulnerabilities")
+
+
+class PersonRhetoricalPattern(Base):
+    """Katalog stałych nawyków retorycznych, chwytów erystycznych i mostków polityka."""
+    __tablename__ = "person_rhetorical_patterns"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    person_id = Column(String(36), ForeignKey("persons.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    typ_wzorca = Column(String(100), nullable=False) # "mostek_erystyczny", "whataboutism", "apel_do_ludu", "frazes_wytrych"
+    nazwa_wzorca = Column(String(255), nullable=False)
+    szablon_lub_cytat = Column(Text, nullable=False)
+    funkcja_manipulacyjna = Column(Text, nullable=True)
+    czestotliwosc_uzycia = Column(Integer, default=1)
+    przyklady = Column(JSON, default=list)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    person = relationship("Person", back_populates="rhetorical_patterns")
+
+
+class PersonExternalFact(Base):
+    """Wzbogacenie faktograficzne z sieci: weryfikacja oświadczeń, głosowania, fakty zewnętrzne."""
+    __tablename__ = "person_external_facts"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    person_id = Column(String(36), ForeignKey("persons.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    temat = Column(String(255), nullable=False, index=True)
+    twierdzenie_polityka = Column(Text, nullable=False)
+    werdykt_weryfikacji = Column(String(50), nullable=False) # "prawda", "falsz", "manipulacja", "brak_potwierdzenia"
+    fakty_ustalone = Column(Text, nullable=False)
+    zrodlo_nazwa = Column(String(255), nullable=True)
+    zrodlo_url = Column(Text, nullable=True)
+    data_weryfikacji = Column(DateTime, default=datetime.utcnow)
+
+    person = relationship("Person", back_populates="external_facts")
 

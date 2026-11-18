@@ -4,9 +4,11 @@ import logging
 from pathlib import Path
 from sqlalchemy import select, update
 from app.db.database import AsyncSessionLocal
-from app.db.models import Recording
+from app.db.models import Recording, Person
 from app.services.storage import storage_service
 from app.services.media import media_service
+from app.services.knowledge_base_service import knowledge_base_service
+from app.services.person_matcher import person_matcher
 
 logger = logging.getLogger("dyskurs.pipeline")
 
@@ -258,6 +260,26 @@ async def run_pipeline_step_by_step(recording_id: str) -> None:
                         r_to_update.krok_postepu = "Analiza behawioralna i profilowanie zakończone sukcesem."
                         r_to_update.procent_postepu = 100
                         r_to_update.blad = None
+
+                        # Zasilenie długofalowej bazy wiedzy o polityku z inteligentnym dopasowaniem (Entity Resolution)
+                        person_name = r_to_update.polityk_docelowy or target_person
+                        if person_name and person_name.strip():
+                            person, is_new, match_score = await person_matcher.find_or_resolve_person(
+                                session,
+                                input_name=person_name.strip(),
+                                create_if_missing=True,
+                                role=getattr(r_to_update, "rola_polityka", None)
+                            )
+                            if person:
+                                # Zsynchronizuj wyczyszczoną nazwę kanoniczną w nagraniu
+                                r_to_update.polityk_docelowy = person.imie_nazwisko
+                                try:
+                                    await knowledge_base_service.ingest_recording_to_dossier(
+                                        session, recording_id=recording_id, person_id=person.id
+                                    )
+                                except Exception as kb_err:
+                                    logger.warning(f"Błąd asymilacji nagrania do bazy wiedzy: {kb_err}")
+
                         await session.commit()
                         break
             except Exception as e:

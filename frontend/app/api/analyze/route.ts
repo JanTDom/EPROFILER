@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sanitizeVideoUrl } from "@/lib/api";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zrkyyopftellntxxwgmo.supabase.co";
@@ -21,7 +21,18 @@ Obowiązują cię zasady audytu sztabowego i spin doctoringu:
 4. Analiza powierzchni ataku (amunicja dla oponentów): Identyfikujesz niefortunne sformułowania i tzw. 'samobóje', które sztaby konkurencji wytną na rolki, paski i spoty jako dowód słabości lub nieszczerości.
 5. Warsztat wystąpień i dykcja: Oceniasz tempo mowy, intonację (unikanie intonacji pytającej przy twierdzeniach), pauzy retoryczne i natrętne wypełniacze.
 6. Skrypty naprawcze: Każdy zdiagnozowany błąd musi mieć gotowy szablon naprawczy ('Zamiast: X -> Mów: Y').
-7. Kalibracja oceny: Kompresuj oceny ku środkowi skali (na skali 1-10 unikaj skrajności 1 czy 10; realistyczne, krytyczne wystąpienia pod presją mieszczą się typowo w przedziale 4-7/10).
+7. Rzetelna, zróżnicowana ocena punktowa (1-10): Bezwzględny zakaz asekuracyjnego uciekania w jednakową ocenę 6/10! Ocena punktowa musi być zróżnicowana i oparta o realny bilans 4 filarów:
+   - Filar 1 (waga 25%): Opanowanie emocjonalne i mowa ciała/głos (pokerowa twarz vs wycieki stresu/AU14/drżenie głosu).
+   - Filar 2 (waga 30%): Siła argumentacji i spójność (twarde dane i logika vs frazesy, luki i samobóje).
+   - Filar 3 (waga 25%): Kontrola narracji i radzenie sobie z trudnymi pytaniami (agenda setting, celne riposty vs ucieczki i defensywa).
+   - Filar 4 (waga 20%): Wiarygodność i nośność medialna (naturalność i charyzma vs sztuczność, nośne setki).
+   Skala ocen:
+   * 1-2: Katastrofa wizerunkowa, dekompozycja, panika, ucieczka przed pytaniami, kardynalne samobóje.
+   * 3-4: Zdecydowana porażka, dominacja dziennikarza/oponenta, rażące uniki, widoczny stres i słabość.
+   * 5-6: Występ przeciętny, odtwórczy przekaz, brak błysku, widoczne napięcia i uniki przy trudnych wątkach.
+   * 7-8: Solidny sukces lidera, wysoka kontrola, celne riposty z faktami, opanowanie pod presją.
+   * 9-10: Wybitne mistrzostwo retoryczne, pełne narzucenie agendy, bezbłędne puenty, brak wycieków stresu.
+   Oceń wystąpienie odważnie i rzetelnie według stanu faktycznego (nie domyślne 6)!
 8. Zwięzłość i gęstość informacyjna: Wszystkie opisy i uzasadnienia formułuj zwięźle, esencjonalnie, unikając rozwlekłości.
 9. Format językowy: Pisz czystą polszczyzną w sentence case (tylko pierwsza litera zdania wielka). Odpowiadaj wyłącznie poprawnym JSON-em.`;
 
@@ -175,7 +186,7 @@ ZASADY AUDYTU PRZECIWNIKA (OPPOSITION RESEARCH & WEKTORY ATAKU):
    - Gotowe pytania-pułapki i riposty uderzeniowe, które zamykają mu drogę ucieczki.
 4. AMUNICJA UDERZENIOWA DO SPOTÓW I MEDIÓW:
    - Wskaż samobójcze cytaty do natychmiastowego wycięcia na rolki i spoty kompromitujące.
-5. OCENA PODATNOŚCI NA ATAK (1-10): Gdzie 1 oznacza oponenta odpornego, a 10 oznacza oponenta skrajnie kruchego i łatwego do dekompozycji pod presją.
+5. RZETELNA OCENA PODATNOŚCI NA ATAK (1-10): Wylicz dynamicznie na pełnej skali: 1-2 = oponent żelazny/niezniszczalny; 3-4 = trudny do sprowokowania; 5-6 = umiarkowane luki; 7-8 = wyraźna kruchość i wycieki; 9-10 = skrajna dekompozycja i łatwa kompromitacja (nie wpisuj sztywnej liczby).
 6. FORMAT: Czysta polszczyzna, sentence case, odpowiedź wyłącznie poprawnym JSON-em.
 
 Zwróć poprawny JSON o schemacie:
@@ -213,7 +224,7 @@ Zwróć poprawny JSON o schemacie:
   },
   "analiza_przeciwnika": {
     "glowna_podatnosc_oponenta": "Obszerna diagnoza największych słabości oponenta (3-4 zdania)",
-    "ocena_podatnosci_na_atak_1_10": 8,
+    "ocena_podatnosci_na_atak_1_10": 7,
     "punkty_wejscia_argumentacyjne": [
       {
         "tytul_wektora": "Tytuł słabego punktu w sentence case",
@@ -264,7 +275,7 @@ ZASADY AUDYTU PRZECIWNIKA (OPPOSITION RESEARCH & WEKTORY ATAKU):
    - Do każdego słabego punktu przygotuj gotowe, bezwzględne pytanie-pułapkę lub ripostę uderzeniową zamykającą drogę ucieczki.
 4. AMUNICJA UDERZENIOWA DO SPOTÓW I SOCIAL MEDIÓW:
    - Wskaż najbardziej kompromitujące cytaty i momenty oponenta ('samobóje') do natychmiastowego wycięcia na spoty, paski i rolki.
-5. OCENA PODATNOŚCI NA ATAK (1-10): 1 - oponent odporny, 10 - skrajnie kruchy i łatwy do sprowokowania pod presją.
+5. RZETELNA OCENA PODATNOŚCI NA ATAK (1-10): Wylicz dynamicznie na pełnej skali: 1-2 = oponent żelazny/odporny; 3-4 = niska podatność; 5-6 = umiarkowane luki; 7-8 = wyraźna kruchość i wycieki emocjonalne; 9-10 = skrajna dekompozycja i łatwa kompromitacja (nie wpisuj sztywnej liczby).
 6. FORMAT: Sentence case, czysta polszczyzna, odpowiedź wyłącznie poprawnym JSON-em.
 
 Zwróć poprawny JSON o schemacie:
@@ -302,7 +313,7 @@ Zwróć poprawny JSON o schemacie:
   },
   "analiza_przeciwnika": {
     "glowna_podatnosc_oponenta": "Obszerna diagnoza największych słabości oponenta (3-4 zdania)",
-    "ocena_podatnosci_na_atak_1_10": 8,
+    "ocena_podatnosci_na_atak_1_10": 7,
     "punkty_wejscia_argumentacyjne": [
       {
         "tytul_wektora": "Tytuł słabego punktu w sentence case",
@@ -344,7 +355,7 @@ Specjalne wytyczne dla nagrania audio:
 3. Zrozumienie i focus na osobie diagnozowanej: Rozróżnij dziennikarza/prowadzącego od osoby diagnozowanej. Cały profil, werdykt, błędy, uniki, ocena i analiza głosu muszą dotyczyć wyłącznie osoby diagnozowanej!
 4. Bezwzględna czujność i brak taryfy ulgowej: Żadnych laurek. Polityk potrzebuje twardej prawdy o swoich słabościach.
 5. Maksymalna szczegółowość i gęstość informacyjna: Nie twórz skrótów ani jednozdaniowych podsumowań! Podaj minimum 4-6 rozbudowanych atutów, 4-6 kardynalnych błędów z dokładnymi cytatami, 4-6 wycieków emocjonalnych w głosie, 3-5 luk logicznych, 3-5 ryzykownych wypowiedzi dla oponentów, 4-6 gotowych ripost sztabowych („Zamiast X -> Mów Y”) oraz 5-8 dyrektyw strategicznych.
-6. Kalibracja oceny: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
+6. Rzetelna kalibracja oceny punktowej (1-10): Oblicz ocenę 1-10 w pełnym spektrum na podstawie bilansu atutów do błędów, akustyki głosu, siły argumentacji i radzenia sobie z presją. Kategoryczny zakaz asekuracji i domyślnego wystawiania noty 6/10 — nota musi odzwierciedlać faktyczną jakość występu (od 2-3 przy kompromitacji/panice, przez 5-6 przy przeciętności, po 8-9 przy pełnej dominacji i sukcesie wizerunkowym).
 7. Format językowy: W zdaniu tylko pierwsza litera pierwszego wyrazu ma być wielka, chyba że gdzieś jest nazwa własna. Czysta polszczyzna, odpowiedź wyłącznie poprawnym JSON-em.
 
 Zwróć poprawny JSON o schemacie:
@@ -382,7 +393,7 @@ Zwróć poprawny JSON o schemacie:
   },
   "marketing_polityczny": {
     "werdykt": "Występ poprawny z zastrzeżeniami | Bilans mieszany ze wskazaniem na błędy | Sukces wizerunkowy | Porażka wizerunkowa",
-    "ocena_punktowa_1_10": 6,
+    "ocena_punktowa_1_10": 7,
     "uzasadnienie_werdyktu": "Rozbudowane, 3-5 zdaniowe uzasadnienie werdyktu",
     "glowne_plusy": [
       {
@@ -460,7 +471,7 @@ Zasady audytu sztabowego:
    - W sekcji 'gotowe_riposty_zamiast_bledow': podaj od 4 do 6 gotowych formuł sztabowych ('Zamiast: X -> Mów: Y').
    - W sekcji 'wnioski': każdy punkt rozwiń w pełne, analityczne 3-5 zdań z dowodami.
    - W sekcji 'rekomendacje_sztabowe': podaj od 5 do 8 precyzyjnych, twardych dyrektyw sztabowych.
-5. Kalibracja oceny: Skompresuj ocenę punktową 1-10 ku środkowi skali (typowa ocena: 4–7/10).
+5. Rzetelna kalibracja oceny punktowej (1-10): Oblicz ocenę 1-10 w pełnym spektrum na podstawie bilansu atutów do błędów, mowy ciała FACS, siły argumentacji i radzenia sobie z presją. Kategoryczny zakaz asekuracji i domyślnego wystawiania noty 6/10 — nota musi odzwierciedlać faktyczną jakość występu (od 2-3 przy kompromitacji/panice, przez 5-6 przy przeciętności, po 8-9 przy pełnej dominacji i sukcesie wizerunkowym).
 6. Format językowy: W zdaniu tylko pierwsza litera pierwszego wyrazu ma być wielka, chyba że gdzieś jest nazwa własna. Czysta polszczyzna, odpowiedź wyłącznie poprawnym JSON-em.
 
 Zwróć poprawny JSON o schemacie:
@@ -498,7 +509,7 @@ Zwróć poprawny JSON o schemacie:
   },
   "marketing_polityczny": {
     "werdykt": "Występ poprawny z zastrzeżeniami | Bilans mieszany ze wskazaniem na błędy | Sukces wizerunkowy | Porażka wizerunkowa",
-    "ocena_punktowa_1_10": 6,
+    "ocena_punktowa_1_10": 7,
     "uzasadnienie_werdyktu": "Rozbudowane, 3-5 zdaniowe uzasadnienie werdyktu",
     "glowne_plusy": [
       {
@@ -655,7 +666,13 @@ Zwróć poprawny JSON o schemacie:
       throw new Error("Pusta odpowiedź od modelu AI.");
     }
 
-    let analysis = JSON.parse(candidateText);
+    // Bezpieczne oczyszczenie formatowania Markdown (```json ... ```)
+    let cleanedText = candidateText.trim();
+    if (cleanedText.startsWith("```")) {
+      cleanedText = cleanedText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    }
+
+    let analysis = JSON.parse(cleanedText);
     if (Array.isArray(analysis) && analysis.length > 0) analysis = analysis[0];
 
     // Rozpoznani mówcy i cel
@@ -684,6 +701,32 @@ Zwróć poprawny JSON o schemacie:
     const mkt = analysis.marketing_polityczny || {};
     const plusy = mkt.glowne_plusy || [];
     const minusy = mkt.popelnione_bledy_i_minusy || [];
+    const adv = analysis.analiza_przeciwnika || {};
+
+    // Rzetelna normalizacja oceny punktowej 1-10 bez sztucznej kompresji
+    if (typeof mkt.ocena_punktowa_1_10 === "string") {
+      const parsed = parseInt(mkt.ocena_punktowa_1_10.split("/")[0], 10);
+      mkt.ocena_punktowa_1_10 = isNaN(parsed) ? 6 : Math.min(10, Math.max(1, parsed));
+    } else if (typeof mkt.ocena_punktowa_1_10 === "number") {
+      mkt.ocena_punktowa_1_10 = Math.min(10, Math.max(1, Math.round(mkt.ocena_punktowa_1_10)));
+    } else if (mkt.werdykt) {
+      const pCount = plusy.length;
+      const mCount = minusy.length + (mkt.nielogicznosci_i_luki_argumentacyjne?.length || 0);
+      if (mkt.werdykt.toLowerCase().includes("sukces") || pCount >= mCount + 3) {
+        mkt.ocena_punktowa_1_10 = 8;
+      } else if (mkt.werdykt.toLowerCase().includes("porażka") || mCount >= pCount + 2) {
+        mkt.ocena_punktowa_1_10 = 4;
+      } else {
+        mkt.ocena_punktowa_1_10 = 6;
+      }
+    }
+
+    if (typeof adv.ocena_podatnosci_na_atak_1_10 === "string") {
+      const parsedAdv = parseInt(adv.ocena_podatnosci_na_atak_1_10.split("/")[0], 10);
+      adv.ocena_podatnosci_na_atak_1_10 = isNaN(parsedAdv) ? 7 : Math.min(10, Math.max(1, parsedAdv));
+    } else if (typeof adv.ocena_podatnosci_na_atak_1_10 === "number") {
+      adv.ocena_podatnosci_na_atak_1_10 = Math.min(10, Math.max(1, Math.round(adv.ocena_podatnosci_na_atak_1_10)));
+    }
 
     const psych = analysis.profil_psychometryczny_wielka_piatka || {};
     const profileEntry = {

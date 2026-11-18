@@ -458,7 +458,7 @@ export default function HelpPage() {
               <div className="p-3 bg-slate-900/60 border border-slate-800 rounded-lg">
                 <strong className="text-white block mb-1">Werdykt i ocena punktowa (1-10):</strong>
                 <p className="text-xs text-slate-400">
-                  Ocena jest celowo kalibrowana ku środkowi skali (zwykle 4-7/10). Wystąpienie pod ogniem pytań prawie nigdy nie jest „idealne 10”, ani „całkowitą katastrofą 1”. Ocena odzwierciedla realną odporność psychiczną polityka.
+                  Ocena punktowa w skali 1-10 odzwierciedla rzetelny bilans 4 filarów: opanowania emocji i mowy ciała (25%), siły argumentacji i logiki (30%), kontroli narracji i ripost pod presją (25%) oraz autentyczności i nośności medialnej (20%). System stosuje pełne spektrum ocen (od 1-3 przy dekompozycji i rażących błędach, przez 5-6 przy przeciętności, po 8-10 przy pełnej dominacji debaty), bez sztucznej asekuracji.
                 </p>
               </div>
 

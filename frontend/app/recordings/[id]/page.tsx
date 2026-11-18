@@ -774,11 +774,13 @@ export default function RecordingDetailPage() {
               {/* Werdykt i ocena punktowa 1-10 */}
               {(() => {
                 const marketing = recording.psychometric_profile?.surowe_wnioski_ai?.marketing_polityczny;
-                const score = marketing?.ocena_punktowa_1_10 ?? (recording.psychometric_profile?.wynik_ogolny ? Math.round(recording.psychometric_profile.wynik_ogolny / 10) : 7);
+                const score = typeof marketing?.ocena_punktowa_1_10 === "number"
+                  ? marketing.ocena_punktowa_1_10
+                  : (recording.psychometric_profile?.wynik_ogolny ? Math.round(recording.psychometric_profile.wynik_ogolny / 10) : 6);
                 const verdict = marketing?.werdykt || "Występ poprawny / Realizacja założeń partyjnych";
                 const rationale = marketing?.uzasadnienie_werdyktu || recording.psychometric_profile?.podsumowanie_ai_proste;
                 
-                const scoreColor = score >= 8 
+                const scoreColor = score >= 7 
                   ? "from-emerald-500/20 to-teal-500/10 border-emerald-500/40 text-emerald-300"
                   : score >= 5
                   ? "from-amber-500/20 to-yellow-500/10 border-amber-500/40 text-amber-300"
