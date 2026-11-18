@@ -437,7 +437,7 @@ export default function RecordingDetailPage() {
                 title="Tryb audytu: wzmocnienie kandydata, wygaszanie błędów i dyrektywy sztabowe"
               >
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>🛡️ Sojusznik (Audyt)</span>
+                <span>Sojusznik (Audyt)</span>
               </button>
 
               <button
@@ -451,7 +451,7 @@ export default function RecordingDetailPage() {
                 title="Tryb wywiadu ofensywnego: słabości, destabilizacja psychiczna, pytania-pułapki i amunicja spotowa"
               >
                 <Target className="w-4 h-4 text-rose-400" />
-                <span>🎯 Przeciwnik (Wektory ataku)</span>
+                <span>Przeciwnik (Wektory ataku)</span>
               </button>
             </div>
 
@@ -707,7 +707,7 @@ export default function RecordingDetailPage() {
                     }`}
                   >
                     <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                    <span>🛡️ Audyt sztabowy (Sojusznik)</span>
+                    <span>Audyt sztabowy (Sojusznik)</span>
                   </button>
 
                   <button
@@ -720,7 +720,7 @@ export default function RecordingDetailPage() {
                     }`}
                   >
                     <Target className="w-4 h-4 text-rose-400" />
-                    <span>🎯 Dossier ataku (Przeciwnik)</span>
+                    <span>Dossier ataku (Przeciwnik)</span>
                   </button>
                 </div>
               </div>
@@ -1391,7 +1391,8 @@ export default function RecordingDetailPage() {
               className="w-full p-4 flex items-center justify-between text-xs font-semibold text-slate-300 hover:text-cyan-300 hover:bg-studio-surface/60 transition-colors"
             >
               <span className="flex items-center gap-2">
-                🔬 Twarde pomiary E-PROFILERA (parametry behawioralne i akustyczne)
+                <Activity className="w-4 h-4 text-cyan-400" />
+                Twarde pomiary E-PROFILERA (parametry behawioralne i akustyczne)
               </span>
               {showTechnicalDrawer ? <ChevronUp className="w-4 h-4 text-cyan-400" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
             </button>

@@ -308,8 +308,8 @@ function LoginForm() {
                 <div>
                   <span>W okienku, które wyskoczy, wybierz typ projektu:</span>
                   <div className="mt-1 p-2 bg-slate-900 border border-slate-800 rounded text-cyan-300 font-mono text-[11px] space-y-1">
-                    <div>👉 <strong>Dla opcji darmowej:</strong> wybierz <em>"Create API key in new project"</em> (bez karty).</div>
-                    <div>👉 <strong>Dla opcji płatnej:</strong> wskaż projekt z Google Cloud Billing.</div>
+                    <div><span className="text-cyan-400 font-bold mr-1.5">•</span><strong>Dla opcji darmowej:</strong> wybierz <em>"Create API key in new project"</em> (bez karty).</div>
+                    <div><span className="text-cyan-400 font-bold mr-1.5">•</span><strong>Dla opcji płatnej:</strong> wskaż projekt z Google Cloud Billing.</div>
                   </div>
                 </div>
               </li>

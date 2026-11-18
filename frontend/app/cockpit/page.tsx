@@ -152,7 +152,9 @@ function StudioCockpitContent() {
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (wakeLockRef.current) {
-        wakeLockRef.current.release().catch(() => {});
+        wakeLockRef.current.release().catch((err: unknown) => {
+          console.warn("[Cockpit] Błąd zwalniania blokady wygaszania ekranu:", err);
+        });
         wakeLockRef.current = null;
       }
     };
@@ -458,14 +460,18 @@ function StudioCockpitContent() {
     }
 
     if (audioContextRef.current) {
-      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current.close().catch((err: unknown) => {
+        console.warn("[Cockpit] Błąd zamykania kontekstu audio:", err);
+      });
       audioContextRef.current = null;
     }
 
     if (recognitionRef.current) {
       try {
         recognitionRef.current.stop();
-      } catch (e) {}
+      } catch (e) {
+        console.warn("[Cockpit] Błąd zatrzymania rozpoznawania mowy:", e);
+      }
       recognitionRef.current = null;
     }
   };
@@ -486,7 +492,9 @@ function StudioCockpitContent() {
           party: party || "",
         }),
       });
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[Cockpit] Nie udało się zaktualizować aktywnego mówcy na serwerze:", e);
+    }
   };
 
   // 7. Dodawanie nowego gościa
@@ -515,7 +523,9 @@ function StudioCockpitContent() {
           role: newG.role,
         }),
       });
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[Cockpit] Nie udało się dodać gościa na serwerze:", e);
+    }
   };
 
   // 8. Wysłanie notatki z War-Roomu
@@ -536,7 +546,9 @@ function StudioCockpitContent() {
         }),
       });
       pollSession();
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[Cockpit] Nie udało się wysłać notatki z War-Roomu:", e);
+    }
   };
 
   // 9. Odznaczenie / usunięcie alertu lub wiadomości
@@ -555,15 +567,21 @@ function StudioCockpitContent() {
           messageId: msgId,
         }),
       });
-    } catch (e) {}
+    } catch (e) {
+      console.warn("[Cockpit] Nie udało się odznaczyć wiadomości na serwerze:", e);
+    }
   };
 
   // 10. Pełny ekran
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      document.documentElement.requestFullscreen().then(() => setIsFullscreen(true)).catch((err: unknown) => {
+        console.warn("[Cockpit] Błąd przejścia w tryb pełnoekranowy:", err);
+      });
     } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch((err: unknown) => {
+        console.warn("[Cockpit] Błąd wyjścia z trybu pełnoekranowego:", err);
+      });
     }
   };
 
@@ -900,7 +918,7 @@ function StudioCockpitContent() {
                 disabled={isAnalyzing}
                 className="text-[11px] font-mono px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-700/70 hover:border-slate-500 transition-colors text-left cursor-pointer"
               >
-                💬 „Nigdy nie popieraliśmy podwyżek podatków...”
+                „Nigdy nie popieraliśmy podwyżek podatków...”
               </button>
               <button
                 type="button"
@@ -913,7 +931,7 @@ function StudioCockpitContent() {
                 disabled={isAnalyzing}
                 className="text-[11px] font-mono px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-700/70 hover:border-slate-500 transition-colors text-left cursor-pointer"
               >
-                💬 „To insynuacje mediów, nie będę się tłumaczyć!”
+                „To insynuacje mediów, nie będę się tłumaczyć!”
               </button>
               <button
                 type="button"
@@ -926,7 +944,7 @@ function StudioCockpitContent() {
                 disabled={isAnalyzing}
                 className="text-[11px] font-mono px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-slate-300 rounded-lg border border-slate-700/70 hover:border-slate-500 transition-colors text-left cursor-pointer"
               >
-                💬 Prowadzący: „Dlaczego unika pan odpowiedzi o deficyt?”
+                Prowadzący: „Dlaczego unika pan odpowiedzi o deficyt?”
               </button>
             </div>
 
@@ -1022,8 +1040,9 @@ function StudioCockpitContent() {
                   >
                     <div className="flex items-center justify-between gap-3 mb-2">
                       <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded border ${badgeBg}`}>
-                          {isWtopa ? "🔴 WTOPA / SPRZECZNOŚĆ" : isEmocje ? "🟡 NERWY / SŁABOŚĆ PSYCHICZNA" : isPulapka ? "🔵 PYTANIE-PUŁAPKA" : "🟢 GOTOWA KONTRA"}
+                        <span className={`text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-0.5 rounded border inline-flex items-center gap-1.5 ${badgeBg}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isWtopa ? "bg-rose-400 animate-pulse" : isEmocje ? "bg-amber-400" : isPulapka ? "bg-blue-400" : "bg-emerald-400"}`} />
+                          {isWtopa ? "WTOPA / SPRZECZNOŚĆ" : isEmocje ? "NERWY / SŁABOŚĆ PSYCHICZNA" : isPulapka ? "PYTANIE-PUŁAPKA" : "GOTOWA KONTRA"}
                         </span>
                         <span className="text-[11px] font-mono text-slate-400">
                           {alert.speaker} • {alert.timestamp}

@@ -888,12 +888,14 @@ export const IngestForm: React.FC = () => {
                             </div>
                             <div className="text-[10px] text-slate-400">
                               {isExceeding ? (
-                                <span className="text-amber-400 font-bold">
-                                  ⚠️ Plik waży {sizeMb} MB (limit chmury: 4.2 MB). Rekomendujemy nagranie fragmentu do 1–1.5 minuty, aby audyt przeszedł pomyślnie.
+                                <span className="text-amber-400 font-bold inline-flex items-center gap-1">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-400 inline-block flex-shrink-0" />
+                                  Plik waży {sizeMb} MB (limit chmury: 4.2 MB). Rekomendujemy nagranie fragmentu do 1–1.5 minuty, aby audyt przeszedł pomyślnie.
                                 </span>
                               ) : (
-                                <span className="text-emerald-400">
-                                  ✅ Rozmiar pliku ({sizeMb} MB) idealnie zoptymalizowany pod szybki audyt AI w chmurze.
+                                <span className="text-emerald-400 inline-flex items-center gap-1">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 inline-block flex-shrink-0" />
+                                  Rozmiar pliku ({sizeMb} MB) idealnie zoptymalizowany pod szybki audyt AI w chmurze.
                                 </span>
                               )}
                             </div>
@@ -938,8 +940,9 @@ export const IngestForm: React.FC = () => {
                     <div><strong>2.</strong> Wyłącz opcję: <strong>„Użyj akceleracji graficznej, gdy jest dostępna”</strong> (Hardware acceleration).</div>
                     <div><strong>3.</strong> Kliknij <strong>Uruchom ponownie</strong> obok tej opcji w Chrome.</div>
                   </div>
-                  <p className="text-emerald-300 text-[10px] font-bold">
-                    ✨ Po tym prostym zabiegu żaden serwis VOD nie wyświetli już czarnego ekranu przy nagrywaniu karty!
+                  <p className="text-emerald-300 text-[10px] font-bold flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400 inline-block flex-shrink-0" />
+                    <span>Po tym prostym zabiegu żaden serwis VOD nie wyświetli już czarnego ekranu przy nagrywaniu karty!</span>
                   </p>
                 </div>
               )}

@@ -522,7 +522,7 @@ export default function HelpPage() {
               <div className="p-4 bg-slate-900/90 border border-emerald-500/40 rounded-xl space-y-2">
                 <div className="flex items-center gap-2 text-emerald-300 font-bold">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Tryb 🛡️ Sojusznik (Audyt sztabowy)</span>
+                  <span>Tryb Sojusznik (Audyt sztabowy)</span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Dla naszych kandydatów i współpracowników. Skupia się na obronie: wygaszaniu wpadek, wzmacnianiu naturalnych atutów, likwidacji niepożądanych nawyków mowy ciała oraz skryptach gotowych ripost przed trudnymi wywiadami.
@@ -532,7 +532,7 @@ export default function HelpPage() {
               <div className="p-4 bg-slate-900/90 border border-rose-500/50 rounded-xl space-y-2 shadow-[0_0_15px_rgba(244,63,94,0.15)]">
                 <div className="flex items-center gap-2 text-rose-300 font-bold">
                   <Target className="w-4 h-4 text-rose-400" />
-                  <span>Tryb 🎯 Przeciwnik (Wywiad ofensywny & Wektory ataku)</span>
+                  <span>Tryb Przeciwnik (Wywiad ofensywny & Wektory ataku)</span>
                 </div>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   Dla każdego oponenta: polityka rywalizującej formacji, ale również stronniczego dziennikarza czy agresywnego działacza społecznego. Skupia się na ataku: obnażaniu pychy, wywoływaniu złości i przygotowywaniu amunicji do spotów.
@@ -593,7 +593,7 @@ export default function HelpPage() {
               <strong className="text-white block text-xs">Gdzie możesz włączać i przełączać tryb Przeciwnika?</strong>
               <ul className="space-y-1.5 text-xs text-slate-300 list-disc list-inside">
                 <li><strong>Na stronie głównej (pasek szybkiego startu):</strong> Przed wklejeniem linku możesz kliknąć przełącznik <code>[ Przeciwnik ]</code>.</li>
-                <li><strong>W nagłówku nagrania (HUD):</strong> Przycisk <code>[ 🎯 Przeciwnik (Wektory ataku) ]</code> przełącza widok i dane w ułamku sekundy (0 ms).</li>
+                <li><strong>W nagłówku nagrania (HUD):</strong> Przycisk <code>[ Przeciwnik (Wektory ataku) ]</code> przełącza widok i dane w ułamku sekundy (0 ms).</li>
                 <li><strong>W oknie wyboru mówcy:</strong> Klikając „Wskaż innego mówcę”, możesz przypisać relację „Przeciwnik” do konkretnej wykrytej osoby (np. SPEAKER_00 lub SPEAKER_01).</li>
                 <li><strong>Eksport do PDF:</strong> Po wybraniu trybu Przeciwnik, górny przycisk pobierania zmienia się w <code>Raport oponenta PDF (Wektory ataku)</code> i generuje dokument z pełnym dossier wywiadu ofensywnego.</li>
               </ul>

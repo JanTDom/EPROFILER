@@ -15,6 +15,7 @@ import {
   Sparkles,
   Activity,
   Shield,
+  Target,
   Radio,
   ArrowUpRight,
   TrendingUp,
@@ -246,8 +247,8 @@ export default async function DashboardPage() {
                       {rec.relacja_polityka === "przeciwnik" ? (
                         <div>
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950/80 text-rose-300 border border-rose-500/40 shadow-[0_0_8px_rgba(244,63,94,0.2)]">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" />
-                            🎯 PRZECIWNIK
+                            <Target className="w-3 h-3 text-rose-400" />
+                            PRZECIWNIK
                           </span>
                           {rec.polityk_docelowy && (
                             <span className="text-[10px] font-mono text-rose-400/80 block truncate mt-0.5 font-semibold">
@@ -258,8 +259,8 @@ export default async function DashboardPage() {
                       ) : (
                         <div>
                           <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-500/40">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                            🛡️ SOJUSZNIK
+                            <Shield className="w-3 h-3 text-emerald-400" />
+                            SOJUSZNIK
                           </span>
                           {rec.polityk_docelowy && (
                             <span className="text-[10px] font-mono text-emerald-400/80 block truncate mt-0.5 font-semibold">
