@@ -11,6 +11,8 @@ __pycache__/
 *.sqlite3
 
 # Node & Next.js
+!frontend/lib/
+!frontend/lib/**
 frontend/node_modules/
 frontend/.next/
 frontend/out/

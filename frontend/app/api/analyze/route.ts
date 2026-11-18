@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sanitizeVideoUrl } from "@/lib/api";
+import { SUPABASE_URL, SUPABASE_SERVICE_ROLE } from "@/lib/supabaseConfig";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zrkyyopftellntxxwgmo.supabase.co";
-const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const SYSTEM_GEMINI_KEY = process.env.GEMINI_API_KEY || "";
+const rawGeminiKey = process.env.GEMINI_API_KEY;
+const SYSTEM_GEMINI_KEY = (rawGeminiKey && rawGeminiKey !== "[SENSITIVE]") ? rawGeminiKey : "";
 
 const SYSTEM_INSTRUCTION = `Jesteś bezkompromisowym, analitycznym doradcą ds. marketingu politycznego, spin doctorem oraz trenerem wystąpień publicznych systemu E-PROFILER.
 Twoim celem jest rzetelny, krytyczny audyt wystąpienia publicznego osoby badanej (polityka, gościa, osoby diagnozowanej).

@@ -1,8 +1,7 @@
 import { Recording, ProgressEventPayload, RecordingType, PoliticianRelation } from "./types";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseConfig";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://zrkyyopftellntxxwgmo.supabase.co";
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "sb_publishable_PxOsJnTMfNACAoNpay6Whw_GFm_sYTd";
 
 function normalizeRecording(rec: any): Recording {
   if (!rec) return rec;
